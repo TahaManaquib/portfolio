@@ -2,6 +2,7 @@
 import Base from '../layouts/Base.astro';
 import Nav from '../components/Nav.astro';
 import Hero from '../components/Hero.astro';
+import { site } from '../data/site';
 
 // Hero is built. `#stack` and `#contact` below are still ANCHOR PLACEHOLDERS —
 // each gets replaced wholesale by its own approved step (PHASES.md Phase 1).
@@ -11,10 +12,7 @@ const placeholders = [
 ] as const;
 ---
 
-<Base
-  title="Taha Manaquib — Backend Engineer"
-  description="Backend engineer building authorization, billing, and integration systems for multi-tenant SaaS. Node.js, Express, MongoDB."
->
+<Base title={site.meta.title} description={site.meta.description}>
   <Nav slot="nav" />
 
   <Hero />

@@ -2,30 +2,44 @@
 // Hero — name, role, one-line pitch, CTA, with About folded in briefly.
 // No separate About section/page (CLAUDE.md).
 //
-// Content is drawn from Taha_Manaquib_CV.md. Deliberately no product or
-// employer names: this site shows no projects, so the CV's achievements appear
-// as evidence of capability rather than as a portfolio of work.
-//
-// The About prose was cut down to three scannable proof points. Same evidence,
-// a fraction of the reading — a recruiter should absorb this in one glance
-// rather than a paragraph.
-const proof = [
-  'RBAC across 840+ endpoints',
-  'OAuth 2.1 server, from scratch',
-  'Stripe billing, multi-currency',
-] as const;
+// Renders entirely from src/data/site.ts. No content is written here.
+import { site } from '../data/site';
+
+const { name, role, pitch, proof, availability } = site;
+
+/**
+ * Oxford-comma separators, so the accent spans can be interleaved with plain
+ * text instead of the sentence being stored as markup.
+ */
+function separatorAfter(index: number, total: number): string {
+  if (index === total - 1) return '';
+  if (index === total - 2) return ', and ';
+  return ', ';
+}
 ---
 
 <section id="top" tabindex="-1" class="border-border py-section-sm sm:py-section border-b">
-  <p class="text-fg-muted font-mono text-xs tracking-wider uppercase">Backend Engineer</p>
+  <p class="text-fg-muted font-mono text-xs tracking-wider uppercase">{role}</p>
 
-  <h1 class="text-display text-fg mt-4 font-medium">Taha Manaquib</h1>
+  <h1 class="text-display text-fg mt-4 font-medium">{name}</h1>
 
+  {
+    /* Emitted as one array expression, not as sibling template nodes: Astro
+      keeps whitespace between siblings (unlike JSX, which strips newlines), so
+      an indented <span> on its own line renders as "authorization , billing".
+      Array items have no whitespace between them. */
+  }
   <p class="text-fg mt-6 max-w-2xl text-lg text-balance sm:text-xl">
-    I build the parts of a SaaS product that have to be right —
-    <span class="text-accent">authorization</span>,
-    <span class="text-accent">billing</span>, and
-    <span class="text-accent">integrations</span>.
+    {
+      [
+        `${pitch.lead} — `,
+        ...pitch.highlights.flatMap((term, i) => [
+          <span class="text-accent">{term}</span>,
+          separatorAfter(i, pitch.highlights.length),
+        ]),
+        '.',
+      ]
+    }
   </p>
 
   <ul class="mt-8 flex flex-wrap gap-2">
@@ -38,10 +52,14 @@ const proof = [
     }
   </ul>
 
-  <p class="text-fg-muted mt-10 flex items-center gap-2 font-mono text-xs tracking-wider uppercase">
-    <span class="bg-accent size-1.5 shrink-0 rounded-full" aria-hidden="true"></span>
-    Open to remote &amp; contract work
-  </p>
+  {
+    availability.open && (
+      <p class="text-fg-muted mt-10 flex items-center gap-2 font-mono text-xs tracking-wider uppercase">
+        <span class="bg-accent size-1.5 shrink-0 rounded-full" aria-hidden="true" />
+        {availability.label}
+      </p>
+    )
+  }
 
   <a
     href="#contact"
