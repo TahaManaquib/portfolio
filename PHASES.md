@@ -1,0 +1,228 @@
+# Build Phases
+
+Read alongside `CLAUDE.md`, which Claude Code loads automatically from the project root.
+
+## How to run each phase
+
+1. In the project folder, start or resume a session: `claude`
+2. Press `Shift+Tab` to enter **Plan Mode** (status bar shows `⏸ plan mode on`).
+3. Paste that phase's prompt below.
+4. Read the plan. Press `Ctrl+G` to open and hand-edit it if anything's off, or reply in chat
+   with changes and ask it to re-plan.
+5. Approve the plan. Choose "manually approve edits" for the first couple of phases until you
+   trust the output, then switch to auto-accept once you're comfortable.
+6. Review the diff / run the app locally, commit, then start the next phase in a **new prompt**
+   (referencing this file keeps it anchored to the right scope).
+
+Do not let a session skip Plan Mode for anything beyond a one-line fix — the whole point of this
+workflow is that nothing gets written until you've seen and approved the plan.
+
+### A phase is not one build step
+
+**A plan being approved does not authorize building the whole phase.** Every phase below is a
+checklist of sections, and they get built **one at a time**:
+
+- Propose the section (structure, content, decisions worth flagging, alternatives worth
+  considering) → build **only** that section → stop → wait for Taha's explicit approval → next.
+- Never scaffold the next section early, and never bundle two sections into one pass because
+  they're "small" or "related."
+- Suggestions along the way are wanted — say what you'd do differently and why — but they are
+  proposals, not permission.
+
+This mirrors the "Build workflow" section in `CLAUDE.md`, which is the authority if the two ever
+disagree.
+
+The site is **mostly an SPA**: core content is stacked sections on a single route, anchor-
+navigated, still statically prerendered. "One section at a time" therefore means one _section of
+the page_, not one route.
+
+---
+
+## Phase 1 — Foundation (clarity and content only)
+
+**Goal:** the recruiter path fully works. No interactivity yet.
+
+There are **no projects, no Selected Work section, and no case study pages** — the portfolio
+itself is the project. Phase 1 is one prerendered page of stacked sections.
+
+Build **in this order, one at a time, each approved before the next**:
+
+1. **Foundation** — project scaffold, base styles/tokens (type scale, palette, spacing), layout
+   shell. Minimal; no content yet.
+2. **Nav** — TAHA / STACK / CONTACT, anchor-based, plus the resume link (nav or footer, not its
+   own section). Keyboard-accessible, works without JS.
+3. **Hero** — name, role, one-line pitch, CTA, with About folded in briefly.
+4. **Stack** — the tech list.
+5. **Contact** — email, GitHub, LinkedIn.
+6. **Footer** — resume + "view source" placement, whatever didn't land in the nav.
+7. **Meta pass** — OG/meta tags and a social preview image.
+
+Throughout: static/SSG rendering, mobile-first, basic accessibility (semantic HTML, focus states).
+
+**Prompt:**
+
+> Plan Phase 1 from PHASES.md: the foundation. Read CLAUDE.md first for full context and
+> constraints. The stack is already locked (Astro + TypeScript + Preact islands + Tailwind,
+> static, no backend) — don't re-propose it. Propose the file/folder structure, then the
+> section-by-section plan listed under Phase 1. There are no
+> projects or case study pages — do not add them. This is a single-page app: stacked sections on
+> one route, anchor-navigated, statically prerendered. No interactive-layer code yet. Build one
+> section at a time and stop for my approval after each — do not build the whole phase in one
+> pass.
+
+---
+
+## Phase 2 — Personality (the terminal)
+
+**Goal:** the site starts to feel alive, still minimal by default. The bigger centerpiece
+(API Simulation) is deliberately split into its own phase — see Phase 3.
+
+Build:
+
+- Terminal (⌘K entry, core commands, one hidden command)
+
+**Prompt:**
+
+> Plan Phase 2 from PHASES.md: the Terminal, per CLAUDE.md's "Interactive layer" section.
+> Confirm it's code-split so it adds no weight to the homepage's initial load — only fetched
+> when the visitor actually opens it. Note the `work` command is gone — commands are `about`,
+> `stack`, `contact`, `clear`, plus the hidden one. Build it in reviewable steps (shell/entry
+> first, then commands, then the hidden command) and stop for my approval between them.
+
+---
+
+## Phase 3 — The API Simulation (centerpiece) + easter eggs
+
+**Goal:** the discovery layer, built around the API Simulation as the spine.
+
+**Achievements are deferred to Phase 5** — see CLAUDE.md. The list is not designed yet and will
+be derived from the finished site. Build the _unlock moments_ (crash, bug icon, each stage
+broken); do not build an achievement list, an `/achievements` page, or unlock copy in this
+phase.
+
+Build, in this order, one step at a time with approval between each:
+
+1. **API Simulation, stage 1 only** — fetch button, minimal load indicator, crash past a
+   threshold, purely client-side/simulated state (no real backend calls needed for this phase).
+2. **Hidden bug icon** — crashing reveals the bug icon per CLAUDE.md's spec (low-opacity, tucked
+   near the button/input, appears only post-crash).
+3. **Attack toolkit** — clicking the bug icon reveals the attack panel.
+4. **Stages 2–5** — rate limiting → caching → queue → graceful degradation, each with its
+   corresponding attack and the "patched" state applied to older attacks. Treat each stage as
+   its own approval step.
+5. **Remaining easter eggs** — logo click sequence, hidden terminal command (if not already
+   done in Phase 2), hidden API-flavored 404 page.
+
+Instrument the unlock-worthy moments as plain events/flags so achievements can be layered on
+later without rework — but no achievement UI now.
+
+**Prompt:**
+
+> Plan Phase 3 from PHASES.md: the API Simulation system exactly as specified in CLAUDE.md's
+> "Interactive layer" section — the 5-stage progression, the hidden bug icon appearing only
+> after the first crash, and the attack toolkit with attacks becoming visibly "patched" as
+> defenses are added. Then plan the remaining easter eggs. Confirm this
+> fully replaces the old API Playground / System Status / mini-game concepts — don't build
+> those as separate features. Achievements are deferred — build the unlock moments and record
+> them as flags, but no achievement list, no /achievements page, no unlock copy. Confirm
+> everything here is code-split and loads only on interaction, and that the whole system stays
+> purely client-side and simulated (there is no backend anywhere in this project). Build one step
+> at a time and stop for my approval after each.
+
+---
+
+## Phase 4 — Return Experience
+
+**Goal:** light reason to come back, without pressure mechanics.
+
+**No backend** — this phase is entirely localStorage. No sync, no remote store, no service.
+
+Build (one at a time, approval between each):
+
+1. Anonymous visitor ID, generated client-side, kept in localStorage
+2. Interaction/unlock-flag persistence in localStorage, read after first paint
+3. Returning-visitor message + one small rotating discovery
+4. Public repo link ("view source"), if not already placed in Phase 1
+
+Achievements are still deferred (Phase 5) — this phase persists the underlying flags, not a
+list. Getting the flags right here is what makes Phase 5 cheap.
+
+**Prompt:**
+
+> Plan Phase 4 from PHASES.md: visitor state and the returning-visitor experience per CLAUDE.md.
+> There is no backend — localStorage only, no sync, no remote store. Confirm it never blocks
+> first paint and that there's no streak/daily-reward mechanic. Include adding a "view source"
+> link to the repo if it isn't already there. Achievements stay deferred: persist the flags, not
+> an achievement list. Build one step at a time and stop for my approval after each.
+
+---
+
+## Phase 5 — Achievements (designed last, from the finished site)
+
+**Goal:** now that the site actually exists, work out what's worth rewarding and build it. This
+phase is deliberately last-but-one: the list is derived from the real moments the finished site
+offers, not invented up front. Nothing in Phases 1–4 should have shipped achievement UI.
+
+Precondition: Phases 1–4 are done and the unlock-worthy moments are already recorded as plain
+flags/events (Phase 3 step-by-step, persisted in Phase 4). If they aren't, wire that first.
+
+Build, one step at a time with approval between each:
+
+1. **Audit + propose the list** — no code. Walk the finished site, inventory every real moment a
+   visitor can reach (terminal, each API Simulation stage, bug icon, easter eggs, return visit,
+   whatever else exists by then), and propose a flat list ordered easy → hard. **Taha approves
+   the list before any of it gets built.** Expect to cut more than you keep; a short list of real
+   moments beats a padded one.
+2. **Unlock plumbing** — map the approved list onto the existing flags. Add flags for anything
+   the audit found that isn't tracked yet. localStorage only, no backend, per CLAUDE.md.
+3. **`/achievements` page** — the flat ordered list, locked entries shown as `???`.
+4. **Entry icon** — small, muted/low-opacity, more visible on hover, no idle animation, no
+   counter or achievement mention anywhere on the homepage.
+5. **Unlock feedback** — graceful and one-time (quiet icon state change or a brief notice),
+   never looping or flashing.
+
+Locked rules that still apply: flat list, no categories, `???` for locked, no homepage mention.
+See CLAUDE.md's Achievements section — it is the authority.
+
+**Prompt:**
+
+> Plan Phase 5 from PHASES.md: achievements. Read CLAUDE.md's Achievements section first — the
+> old draft chain (Hello World / Explorer / etc.) is withdrawn, do not resurrect it. Start with
+> the audit only: walk the finished site, inventory the real moments a visitor can actually
+> reach, and propose a flat list ordered easy → hard for my approval. Do not write any
+> achievement code until I've approved the list. Then build the plumbing, the /achievements page,
+> the entry icon, and unlock feedback as separate approval steps. Keep it code-split and
+> localStorage-only — there is no backend.
+
+---
+
+## Phase 6 — Polish
+
+**Goal:** only after everything above works end to end.
+
+Consider (not committed — propose and confirm before building):
+
+- Page transitions (undecided — evaluate whether they're worth the cost first)
+- Interaction micro-feedback refinement
+- Full accessibility pass
+- Performance pass: Lighthouse/Core Web Vitals check, bundle size audit for the interactive
+  layer, confirm code-splitting is actually working as intended
+
+**Prompt:**
+
+> Plan Phase 6 from PHASES.md: polish pass. Start with a performance and accessibility audit of
+> everything built in Phases 1–5 — Lighthouse scores, bundle size for the interactive layer, and
+> confirmation that code-splitting is working. Then propose whether page transitions are worth
+> adding given CLAUDE.md's performance constraint, and let me decide before building them.
+
+---
+
+## Parked / not scheduled
+
+- Guestbook or an alternative unique interaction (still deciding what — do not build until a
+  phase is written for it)
+- World State system
+- Sound effects
+- Theme toggle
+
+Do not pull these into any phase above without an explicit instruction.

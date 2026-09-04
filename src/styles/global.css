@@ -1,0 +1,135 @@
+@import 'tailwindcss';
+
+/* ---------------------------------------------------------------------------
+   Fonts — self-hosted, latin subset only. No external requests.
+   Both are variable fonts, so one file covers the whole weight range.
+   Vite hashes these URLs; Base.astro imports the same file to emit a matching
+   <link rel="preload"> for the sans (the mono is deliberately not preloaded).
+   --------------------------------------------------------------------------- */
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('@fontsource-variable/inter/files/inter-latin-wght-normal.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 800;
+  src: url('@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2')
+    format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* ---------------------------------------------------------------------------
+   Theme tokens.
+
+   The default Tailwind color palette is cleared on purpose: this site has one
+   background, one text system, and one accent (see CLAUDE.md "Visual
+   direction"). Clearing the defaults means an off-palette color like
+   `text-blue-400` simply won't compile, so the palette is enforced by the
+   config rather than by discipline.
+   --------------------------------------------------------------------------- */
+@theme {
+  --color-*: initial;
+
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  /* Ground + surfaces */
+  --color-bg: #0b0c0e;
+  --color-surface: #111316;
+
+  /* Text system */
+  --color-fg: #e6e7e9;
+  --color-fg-muted: #8b8f96;
+  --color-fg-subtle: #5c6068;
+
+  /* Thin subtle borders */
+  --color-border: #1f2226;
+  --color-border-strong: #2b2f35;
+
+  /* Single accent — muted terminal green */
+  --color-accent: #6ee7a8;
+  --color-accent-dim: #3fbf82;
+  --color-accent-faint: #132a20;
+
+  /* Typography */
+  --font-sans:
+    'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono:
+    'JetBrains Mono Variable', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* Fluid display sizes for headings. Body sizes use Tailwind's defaults. */
+  --text-display: clamp(2.25rem, 1.4rem + 4.2vw, 3.75rem);
+  --text-display--line-height: 1.05;
+  --text-display--letter-spacing: -0.03em;
+
+  --text-heading: clamp(1.5rem, 1.2rem + 1.5vw, 2rem);
+  --text-heading--line-height: 1.15;
+  --text-heading--letter-spacing: -0.02em;
+
+  /* Vertical rhythm between page sections */
+  --spacing-section: 6rem;
+  --spacing-section-sm: 4rem;
+
+  /* The single content column width */
+  --container-content: 44rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Base layer
+   --------------------------------------------------------------------------- */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    /* Anchor nav must not tuck section headings under the sticky nav. */
+    scroll-padding-top: 5rem;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Respect users who ask for less motion — CLAUDE.md requires this from the
+     start, not as a later polish pass. */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* One visible focus treatment everywhere, in the accent. */
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  ::selection {
+    background-color: var(--color-accent);
+    color: var(--color-bg);
+  }
+}

@@ -1,0 +1,56 @@
+---
+import '../styles/global.css';
+
+// Same file the @font-face in global.css points at, so Vite emits one asset and
+// the preload URL matches the one the stylesheet requests.
+//
+// Only the sans is preloaded. The mono is used selectively (technical/system
+// elements, mostly below the fold) and shouldn't compete with first paint.
+import interWoff2 from '@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url';
+
+interface Props {
+  title: string;
+  description: string;
+  /** Path-only, e.g. "/achievements". Resolved against `site` in astro.config.mjs. */
+  path?: string;
+}
+
+const { title, description, path = '/' } = Astro.props;
+const canonical = new URL(path, Astro.site);
+---
+
+<!doctype html>
+<html lang="en" class="scheme-dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+
+    <link rel="preload" href={interWoff2} as="font" type="font/woff2" crossorigin />
+
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0b0c0e" />
+
+    <slot name="head" />
+  </head>
+
+  <body class="min-h-dvh">
+    <a
+      href="#main"
+      class="focus:bg-surface focus:text-fg sr-only rounded-sm focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-2"
+    >
+      Skip to content
+    </a>
+
+    <slot name="nav" />
+
+    <main id="main" class="max-w-content mx-auto w-full px-6">
+      <slot />
+    </main>
+
+    <slot name="footer" />
+  </body>
+</html>
