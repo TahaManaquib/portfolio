@@ -1,0 +1,57 @@
+---
+// Primary nav — TAHA / STACK / CONTACT, plus the résumé.
+//
+// Pure HTML + CSS. No JS, no hamburger: with three items and one action there
+// is nothing to collapse, so the mobile nav is the desktop nav at a smaller
+// size. Everything works with JS disabled.
+//
+// CLAUDE.md allows the résumé in the nav or the footer; it sits here because
+// the recruiter path should reach it without scrolling.
+//
+// Every link carries `min-h-9` (36px): small uppercase text is only ~17px tall,
+// which fails WCAG 2.5.8 Target Size (24x24 minimum). The padding is invisible
+// but makes the tap targets legal and comfortable on touch.
+
+const links = [
+  { href: '#stack', label: 'Stack' },
+  { href: '#contact', label: 'Contact' },
+] as const;
+
+// TODO(before launch): add the real PDF at `public/taha-resume.pdf`.
+const RESUME_HREF = '/taha-resume.pdf';
+---
+
+<nav aria-label="Primary" class="border-border bg-bg sticky top-0 z-40 border-b">
+  <div class="gutter flex h-14 items-center justify-between gap-4 sm:gap-6">
+    <a
+      href="#top"
+      class="text-fg hover:text-accent inline-flex min-h-9 items-center font-mono text-sm font-medium tracking-[0.2em] transition-colors duration-150"
+    >
+      TAHA
+    </a>
+
+    <ul class="flex items-center gap-4 sm:gap-6">
+      {
+        links.map(({ href, label }) => (
+          <li>
+            <a
+              href={href}
+              class="text-fg-muted hover:text-fg inline-flex min-h-9 items-center text-xs tracking-wider uppercase transition-colors duration-150 sm:text-sm"
+            >
+              {label}
+            </a>
+          </li>
+        ))
+      }
+      <li>
+        <a
+          href={RESUME_HREF}
+          download
+          class="border-border text-fg-muted hover:border-accent-dim hover:text-accent inline-flex min-h-9 items-center rounded-sm border px-2.5 text-xs tracking-wider uppercase transition-colors duration-150 sm:text-sm"
+        >
+          Résumé
+        </a>
+      </li>
+    </ul>
+  </div>
+</nav>

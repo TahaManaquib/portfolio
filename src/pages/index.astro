@@ -1,14 +1,31 @@
 ---
 import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
 
-// Foundation only. Sections (nav, hero, stack, contact, footer) land here in
-// the following approved steps — see PHASES.md Phase 1.
+// Nav is built. The sections below are ANCHOR PLACEHOLDERS ONLY — they exist so
+// the nav links resolve and can be tested. Each gets replaced wholesale by its
+// own approved step (hero, stack, contact) — see PHASES.md Phase 1.
+//
+// `tabindex="-1"` makes each section a valid focus target, so following an
+// in-page anchor moves keyboard/screen-reader focus into the section instead of
+// only scrolling the viewport.
+const placeholders = [
+  { id: 'top', label: 'hero' },
+  { id: 'stack', label: 'stack' },
+  { id: 'contact', label: 'contact' },
+] as const;
 ---
 
 <Base title="Taha — Backend Developer" description="Backend developer. This site is the project.">
-  <div class="py-section">
-    <p class="text-fg-muted font-mono text-sm">
-      foundation ready — <span class="text-accent">sections pending</span>
-    </p>
-  </div>
+  <Nav slot="nav" />
+
+  {
+    placeholders.map(({ id, label }) => (
+      <section id={id} tabindex="-1" class="py-section border-border border-b last:border-b-0">
+        <p class="text-fg-muted font-mono text-sm">
+          <span class="text-accent">#{id}</span> — {label} section pending
+        </p>
+      </section>
+    ))
+  }
 </Base>

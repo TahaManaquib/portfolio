@@ -81,8 +81,27 @@
   --spacing-section: 6rem;
   --spacing-section-sm: 4rem;
 
-  /* The single content column width */
-  --container-content: 44rem;
+  /* The layout is full-bleed — there is no centered max-width column. Width is
+     controlled by the `.gutter` edge padding below instead.
+
+     Long-form prose still gets a measure: a paragraph run edge-to-edge on a
+     wide monitor is unreadable. Only paragraphs are constrained; headings and
+     layout content (stack list, contact row) use the full width. */
+  --container-text: 36rem;
+}
+
+/* ---------------------------------------------------------------------------
+   The single shared gutter.
+
+   Full-bleed layout: content runs edge to edge, held off the viewport edges by
+   this padding alone. One clamp instead of breakpoints — 24px on a phone,
+   scaling with the viewport, capped at 64px so an ultrawide doesn't push the
+   content into a thin middle strip.
+
+   The nav row and <main> both use it, which is what keeps them aligned.
+   --------------------------------------------------------------------------- */
+@utility gutter {
+  padding-inline: clamp(1.5rem, 4vw, 4rem);
 }
 
 /* ---------------------------------------------------------------------------
@@ -126,6 +145,16 @@
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
     border-radius: 2px;
+  }
+
+  /* Section anchor targets carry tabindex="-1" so following a nav link moves
+     focus into the section, not just the viewport. Focus still moves (screen
+     readers announce the section); we only drop the ring, because a 2px outline
+     drawn around an entire section is noise and the scroll is already the
+     visible feedback for sighted users. Interactive elements keep their ring. */
+  section[tabindex='-1']:focus,
+  section[tabindex='-1']:focus-visible {
+    outline: none;
   }
 
   ::selection {
