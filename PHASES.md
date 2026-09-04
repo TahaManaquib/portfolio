@@ -196,11 +196,19 @@ See CLAUDE.md's Achievements section — it is the authority.
 
 ---
 
-## Phase 6 — Polish
+## Phase 6 — Polish + README
 
 **Goal:** only after everything above works end to end.
 
-Consider (not committed — propose and confirm before building):
+### Required
+
+- **`README.md`** — the final deliverable, and the last thing built. See CLAUDE.md's "What the
+  README must cover" for the full contents. Written last on purpose: it documents what actually
+  shipped, including real measured numbers from the audit below, not what was planned. Since
+  "view source" is a load-bearing link on the site, the repo landing page is a second front door
+  for recruiters — treat it as portfolio surface, not boilerplate.
+
+### Consider (not committed — propose and confirm before building)
 
 - Page transitions (undecided — evaluate whether they're worth the cost first)
 - Interaction micro-feedback refinement
@@ -208,12 +216,17 @@ Consider (not committed — propose and confirm before building):
 - Performance pass: Lighthouse/Core Web Vitals check, bundle size audit for the interactive
   layer, confirm code-splitting is actually working as intended
 
+Run the performance pass **before** writing the README — its numbers go straight into the README.
+
 **Prompt:**
 
-> Plan Phase 6 from PHASES.md: polish pass. Start with a performance and accessibility audit of
-> everything built in Phases 1–5 — Lighthouse scores, bundle size for the interactive layer, and
-> confirmation that code-splitting is working. Then propose whether page transitions are worth
-> adding given CLAUDE.md's performance constraint, and let me decide before building them.
+> Plan Phase 6 from PHASES.md: polish pass and the README. Start with a performance and
+> accessibility audit of everything built in Phases 1–5 — Lighthouse scores, bundle size for the
+> interactive layer, and confirmation that code-splitting is working. Then propose whether page
+> transitions are worth adding given CLAUDE.md's performance constraint, and let me decide before
+> building them. Finish by writing README.md per CLAUDE.md's "What the README must cover",
+> using the real numbers from the audit — no resume-speak, no claims the repo doesn't back up.
+> Show me the README for approval before committing it.
 
 ---
 

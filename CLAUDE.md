@@ -223,6 +223,28 @@ The _rules_ below are locked and still apply whenever achievements do get built:
 - A visible link to the portfolio's own public repo ("view source") — cheap, on-brand, and the
   main way a visitor inspects real code, since no other projects are shown. Since the site is the
   only project on display, this link is load-bearing, not decorative.
+- **A `README.md` is a required deliverable, written at the end.** Because "view source" is part
+  of the pitch, the repo's landing page is effectively a second front door — a recruiter who
+  clicks through lands on the README before any code. Treat it as portfolio surface, not
+  boilerplate. Written last, once the site is finished, so it describes what actually shipped.
+
+#### What the README must cover
+
+- What the site is, in two or three lines — including that the portfolio *is* the project.
+- Live URL, near the top.
+- The stack, and **why** each piece was chosen — especially why Astro (zero client JS by default)
+  and why there is no backend. The reasoning is the interesting part; a bare list is not.
+- The performance constraint and the evidence it was met (real numbers: bundle sizes, Lighthouse
+  scores, the fact that the recruiter path ships zero JS).
+- The API Simulation explained honestly: what it demonstrates (rate limiting, caching, queue with
+  backpressure, circuit breaker), and that the load is simulated client-side rather than real.
+  Never imply it is a live system.
+- How to run it locally (Node version, install, dev, build).
+- Notable tradeoffs and what was deliberately cut. This section is the most useful signal to
+  another engineer, so do not skip it.
+
+Keep it honest and free of resume-speak. Do not oversell, do not pad, and do not describe
+anything the repo does not actually contain.
 
 ### Explicitly not building
 
