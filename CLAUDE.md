@@ -171,6 +171,30 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
   This system fully absorbs the old API Playground, System Status panel, and "Fix the Server"
   mini-game concepts. Do not build those as separate features alongside this.
 
+- **Source view** — the site's second representation. Every piece of core content also exists as
+  a machine-readable **HTTP/JSON API response** (`GET /taha` → `200 OK` → a JSON body), and a
+  small control in the bottom-right corner swaps the page between the human view and the machine
+  view. It makes "the portfolio _is_ the project" something a visitor can flip a switch and see,
+  rather than a claim in a paragraph.
+
+  **This is a distinct feature, NOT a second centerpiece.** The API Simulation remains the
+  single centerpiece interactive system — it is the one that demonstrates engineering depth
+  (rate limiting, caching, queueing, circuit breaking). The source view demonstrates concept and
+  taste, and it is small on purpose. Do not let it grow into a rival system: no editing, no
+  multiple formats to choose from, no syntax-highlighting themes, no export.
+
+  Rules:
+  - **One source of truth.** Both views are generated at build time from a single typed content
+    module. The content is never written twice. If a change to the human view does not
+    automatically change the machine view, the implementation is wrong.
+  - **Zero JS.** The toggle is a visually-hidden checkbox plus `:checked ~` sibling selectors —
+    natively keyboard-operable and screen-reader-labelled, no island. State does not need to
+    survive a reload; this is a single-page site.
+  - **Honest content.** The machine view reflects what is actually on the page. No invented
+    fields, no fake status codes, no pretending a request happened.
+  - It shares its shape with the `/api/whoami.json` easter egg, so the two reinforce each other
+    instead of being two unrelated jokes.
+
 ### Achievements — DEFERRED, do not design the list yet
 
 **The specific achievement list is not decided and is deliberately not being worked on now.**
@@ -230,7 +254,7 @@ The _rules_ below are locked and still apply whenever achievements do get built:
 
 #### What the README must cover
 
-- What the site is, in two or three lines — including that the portfolio *is* the project.
+- What the site is, in two or three lines — including that the portfolio _is_ the project.
 - Live URL, near the top.
 - The stack, and **why** each piece was chosen — especially why Astro (zero client JS by default)
   and why there is no backend. The reasoning is the interesting part; a bare list is not.
@@ -257,6 +281,8 @@ anything the repo does not actually contain.
   cyberpunk/pixel-art/RPG-XP-bar styling.
 - No backend of any kind: no server, no database, no API routes, no auth, no analytics service,
   no remote persistence. Do not add one unless explicitly instructed.
+- No animated, hover-reactive, or cursor-following background. No matrix/binary rain. The
+  background is static texture only — see "Background" under Visual direction.
 - Page transition polish: undecided — do not build unless explicitly instructed.
 
 ## Visual direction
@@ -269,6 +295,24 @@ anything the repo does not actually contain.
 - Encode the above as Tailwind theme tokens (colors, font families, spacing/type scale) so the
   palette and rhythm are enforced by the config rather than by discipline.
 
+### Background
+
+The site has one site-wide background layer, and it is **the machine view's text rendered at
+~2–3% opacity** — texture that happens to be meaningful, rather than decoration. It must read as
+almost nothing: if a visitor can tell what it says without the source view turned on, it is too
+strong.
+
+- **Static. No hover reaction, no cursor tracking, no animation, no motion of any kind.** The
+  source-view toggle is the reveal; the background itself never responds to the pointer. This is
+  deliberate — an earlier hover-reactive treatment was built and rejected for competing with the
+  content.
+- Identical on mobile and desktop. There is no hover on touch, so a hover-dependent background
+  would simply be missing there; a static one is the same everywhere.
+- It sits behind everything and must never pull real text below the AA contrast floor. Verify
+  contrast with the background in place, not against the bare background colour.
+- No cursor-following spotlight, no matrix/binary rain, no parallax. Those were considered and
+  ruled out.
+
 ## Working conventions
 
 - Build one section at a time and wait for approval — see "Build workflow" above.
@@ -277,6 +321,9 @@ anything the repo does not actually contain.
 - Code-split every interactive-layer feature: a Preact island dynamically imported on user
   action, never on page load. Verify with a build output check, not by assumption.
 - No backend. Visitor/unlock state is localStorage only.
+- All core content lives in one typed content module and is rendered from there. The human view
+  and the machine view (source view) are two renderings of the same data — never two copies of
+  it.
 - Every new interactive feature should map to something in the locked feature list above. If a
   request would add a new major interactive system not listed here, flag it before building —
   don't quietly expand scope.

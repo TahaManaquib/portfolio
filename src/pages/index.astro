@@ -1,23 +1,23 @@
 ---
 import Base from '../layouts/Base.astro';
 import Nav from '../components/Nav.astro';
+import Hero from '../components/Hero.astro';
 
-// Nav is built. The sections below are ANCHOR PLACEHOLDERS ONLY — they exist so
-// the nav links resolve and can be tested. Each gets replaced wholesale by its
-// own approved step (hero, stack, contact) — see PHASES.md Phase 1.
-//
-// `tabindex="-1"` makes each section a valid focus target, so following an
-// in-page anchor moves keyboard/screen-reader focus into the section instead of
-// only scrolling the viewport.
+// Hero is built. `#stack` and `#contact` below are still ANCHOR PLACEHOLDERS —
+// each gets replaced wholesale by its own approved step (PHASES.md Phase 1).
 const placeholders = [
-  { id: 'top', label: 'hero' },
   { id: 'stack', label: 'stack' },
   { id: 'contact', label: 'contact' },
 ] as const;
 ---
 
-<Base title="Taha — Backend Developer" description="Backend developer. This site is the project.">
+<Base
+  title="Taha Manaquib — Backend Engineer"
+  description="Backend engineer building authorization, billing, and integration systems for multi-tenant SaaS. Node.js, Express, MongoDB."
+>
   <Nav slot="nav" />
+
+  <Hero />
 
   {
     placeholders.map(({ id, label }) => (

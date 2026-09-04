@@ -52,10 +52,17 @@ Build **in this order, one at a time, each approved before the next**:
 2. **Nav** — TAHA / STACK / CONTACT, anchor-based, plus the resume link (nav or footer, not its
    own section). Keyboard-accessible, works without JS.
 3. **Hero** — name, role, one-line pitch, CTA, with About folded in briefly.
-4. **Stack** — the tech list.
-5. **Contact** — email, GitHub, LinkedIn.
-6. **Footer** — resume + "view source" placement, whatever didn't land in the nav.
-7. **Meta pass** — OG/meta tags and a social preview image.
+4. **Content module** — extract every piece of core content into one typed source of truth and
+   re-point the hero at it. Everything after this renders from it, and so does the source view
+   in Phase 2 — which is why it comes before the remaining sections rather than after.
+5. **Stack** — the tech list.
+6. **Contact** — email, GitHub, LinkedIn.
+7. **Footer** — resume + "view source" placement, whatever didn't land in the nav.
+8. **Background** — the machine view's text at ~2–3% opacity, site-wide, static, zero JS. Comes
+   after the content module because it renders from it. See CLAUDE.md "Background" for the
+   restraint rules; the short version is that it must be almost invisible and must never react
+   to the pointer.
+9. **Meta pass** — OG/meta tags and a social preview image.
 
 Throughout: static/SSG rendering, mobile-first, basic accessibility (semantic HTML, focus states).
 
@@ -72,22 +79,32 @@ Throughout: static/SSG rendering, mobile-first, basic accessibility (semantic HT
 
 ---
 
-## Phase 2 — Personality (the terminal)
+## Phase 2 — Personality (terminal + source view)
 
 **Goal:** the site starts to feel alive, still minimal by default. The bigger centerpiece
 (API Simulation) is deliberately split into its own phase — see Phase 3.
 
-Build:
+Build, one at a time with approval between each:
 
-- Terminal (⌘K entry, core commands, one hidden command)
+1. **Terminal** (⌘K entry, core commands, one hidden command)
+2. **Source view** — the bottom-right toggle that swaps the page between the human view and the
+   machine view (`GET /taha` → `200 OK` → JSON), per CLAUDE.md's "Source view" spec. Zero JS: a
+   visually-hidden checkbox plus `:checked ~` selectors. It renders from the Phase 1 content
+   module — if you find yourself retyping content here, stop, the data model is wrong.
+
+   Keep it small. It is explicitly **not** a second centerpiece: no editing, no format picker,
+   no themes, no export.
 
 **Prompt:**
 
-> Plan Phase 2 from PHASES.md: the Terminal, per CLAUDE.md's "Interactive layer" section.
-> Confirm it's code-split so it adds no weight to the homepage's initial load — only fetched
-> when the visitor actually opens it. Note the `work` command is gone — commands are `about`,
-> `stack`, `contact`, `clear`, plus the hidden one. Build it in reviewable steps (shell/entry
-> first, then commands, then the hidden command) and stop for my approval between them.
+> Plan Phase 2 from PHASES.md: the Terminal and the Source view, per CLAUDE.md's "Interactive
+> layer" section. For the Terminal, confirm it's code-split so it adds no weight to the
+> homepage's initial load — only fetched when the visitor actually opens it. Note the `work`
+> command is gone — commands are `about`, `stack`, `contact`, `clear`, plus the hidden one. For
+> the Source view, confirm it is zero-JS (hidden checkbox + `:checked ~`), that it renders from
+> the Phase 1 content module rather than duplicating content, and that it stays small — the API
+> Simulation is still the single centerpiece. Build in reviewable steps and stop for my approval
+> between them.
 
 ---
 

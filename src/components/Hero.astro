@@ -1,0 +1,55 @@
+---
+// Hero — name, role, one-line pitch, CTA, with About folded in briefly.
+// No separate About section/page (CLAUDE.md).
+//
+// Content is drawn from Taha_Manaquib_CV.md. Deliberately no product or
+// employer names: this site shows no projects, so the CV's achievements appear
+// as evidence of capability rather than as a portfolio of work.
+//
+// The About prose was cut down to three scannable proof points. Same evidence,
+// a fraction of the reading — a recruiter should absorb this in one glance
+// rather than a paragraph.
+const proof = [
+  'RBAC across 840+ endpoints',
+  'OAuth 2.1 server, from scratch',
+  'Stripe billing, multi-currency',
+] as const;
+---
+
+<section id="top" tabindex="-1" class="border-border py-section-sm sm:py-section border-b">
+  <p class="text-fg-muted font-mono text-xs tracking-wider uppercase">Backend Engineer</p>
+
+  <h1 class="text-display text-fg mt-4 font-medium">Taha Manaquib</h1>
+
+  <p class="text-fg mt-6 max-w-2xl text-lg text-balance sm:text-xl">
+    I build the parts of a SaaS product that have to be right —
+    <span class="text-accent">authorization</span>,
+    <span class="text-accent">billing</span>, and
+    <span class="text-accent">integrations</span>.
+  </p>
+
+  <ul class="mt-8 flex flex-wrap gap-2">
+    {
+      proof.map((item) => (
+        <li class="border-border text-fg-muted rounded-sm border px-2.5 py-1.5 font-mono text-xs">
+          {item}
+        </li>
+      ))
+    }
+  </ul>
+
+  <p class="text-fg-muted mt-10 flex items-center gap-2 font-mono text-xs tracking-wider uppercase">
+    <span class="bg-accent size-1.5 shrink-0 rounded-full" aria-hidden="true"></span>
+    Open to remote &amp; contract work
+  </p>
+
+  <a
+    href="#contact"
+    class="border-border text-fg hover:border-accent-dim hover:text-accent group mt-4 inline-flex min-h-11 items-center gap-2 rounded-sm border px-4 text-sm transition-colors duration-150"
+  >
+    Get in touch
+    <span aria-hidden="true" class="transition-transform duration-150 group-hover:translate-x-0.5"
+      >&rarr;</span
+    >
+  </a>
+</section>
