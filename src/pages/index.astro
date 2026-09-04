@@ -2,20 +2,20 @@
 import Base from '../layouts/Base.astro';
 import Nav from '../components/Nav.astro';
 import Hero from '../components/Hero.astro';
+import Stack from '../components/Stack.astro';
 import { site } from '../data/site';
 
-// Hero is built. `#stack` and `#contact` below are still ANCHOR PLACEHOLDERS —
-// each gets replaced wholesale by its own approved step (PHASES.md Phase 1).
-const placeholders = [
-  { id: 'stack', label: 'stack' },
-  { id: 'contact', label: 'contact' },
-] as const;
+// `#contact` below is still an ANCHOR PLACEHOLDER — replaced wholesale by its
+// own approved step (PHASES.md Phase 1).
+const placeholders = [{ id: 'contact', label: 'contact' }] as const;
 ---
 
 <Base title={site.meta.title} description={site.meta.description}>
   <Nav slot="nav" />
 
   <Hero />
+
+  <Stack />
 
   {
     placeholders.map(({ id, label }) => (

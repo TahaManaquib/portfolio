@@ -1,0 +1,61 @@
+---
+// Stack — grouped, from src/data/site.ts. No content written here.
+//
+// Laid out as a definition list rather than another row of chips: the hero
+// already uses chips for its proof points, and a term/definition spec-sheet
+// reads as documentation, which suits the section better and gives the two
+// sections visual contrast.
+//
+// The `·` separators come from CSS (`li + li::before`), not from the markup.
+// That is deliberate — Astro preserves whitespace between sibling template
+// nodes, so separators written inline render as "Node.js · Express " with
+// stray spaces. Generated content sidesteps it entirely.
+import { site } from '../data/site';
+
+const { primary, also } = site.stack;
+---
+
+<section id="stack" tabindex="-1" class="border-border py-section-sm sm:py-section border-b">
+  <h2 class="text-fg-muted font-mono text-xs tracking-wider uppercase">Stack</h2>
+
+  <dl class="mt-8 grid gap-y-6 sm:grid-cols-[9rem_1fr] sm:gap-x-10 sm:gap-y-5">
+    {
+      primary.map(({ label, items }) => (
+        <>
+          <dt class="text-fg-muted font-mono text-xs tracking-wider uppercase sm:pt-0.5">
+            {label}
+          </dt>
+          <dd class="m-0">
+            <ul class="items flex flex-wrap gap-x-3 gap-y-1">
+              {items.map((item) => (
+                <li class="text-fg text-sm">{item}</li>
+              ))}
+            </ul>
+          </dd>
+        </>
+      ))
+    }
+  </dl>
+
+  <div class="border-border mt-8 border-t pt-6 sm:mt-10">
+    <dl class="grid gap-y-3 sm:grid-cols-[9rem_1fr] sm:gap-x-10">
+      <dt class="text-fg-muted font-mono text-xs tracking-wider uppercase sm:pt-0.5">also</dt>
+      <dd class="m-0">
+        <ul class="items flex flex-wrap gap-x-3 gap-y-1">
+          {also.map((item) => <li class="text-fg-muted text-sm">{item}</li>)}
+        </ul>
+      </dd>
+    </dl>
+  </div>
+</section>
+
+<style>
+  /* Scoped style blocks are compiled without Tailwind's theme context, so
+     build-time helpers like --spacing() are unavailable here. Runtime var()
+     still resolves, since the tokens are real custom properties on :root. */
+  .items li + li::before {
+    content: '·';
+    margin-inline-end: 0.75rem; /* matches gap-x-3 */
+    color: var(--color-fg-subtle);
+  }
+</style>

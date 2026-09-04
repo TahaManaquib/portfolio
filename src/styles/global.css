@@ -51,6 +51,9 @@
   /* Text system */
   --color-fg: #e6e7e9;
   --color-fg-muted: #8b8f96;
+  /* NOT AA-safe for text: 3.1:1 on --color-bg, below the 4.5:1 floor. Use it
+     only for decorative marks (separators, rules, icons that repeat adjacent
+     text). Any real text belongs on --color-fg-muted (6.0:1) or brighter. */
   --color-fg-subtle: #5c6068;
 
   /* Thin subtle borders */
