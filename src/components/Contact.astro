@@ -1,0 +1,41 @@
+---
+// Contact — from src/data/site.ts. No content written here.
+//
+// Same term/definition shape as the Stack section so the two read as one
+// system, but the values are links at body size rather than small text: this
+// is where the recruiter path ends, so it should feel like a destination.
+//
+// No bottom border — this is the last section before the footer.
+import { site } from '../data/site';
+
+const { contact } = site;
+
+/** mailto: stays in place; profile links leave the site. */
+const isExternal = (href: string) => href.startsWith('http');
+---
+
+<section id="contact" tabindex="-1" class="py-section-sm sm:py-section">
+  <h2 class="text-fg-muted font-mono text-xs tracking-wider uppercase">Contact</h2>
+
+  <dl class="mt-8 grid gap-y-2 sm:grid-cols-[9rem_1fr] sm:gap-x-10 sm:gap-y-1">
+    {
+      contact.map(({ label, value, href }) => (
+        <>
+          <dt class="text-fg-muted self-center font-mono text-xs tracking-wider uppercase">
+            {label}
+          </dt>
+          <dd class="m-0">
+            <a
+              href={href}
+              {...(isExternal(href) ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+              class="text-fg hover:text-accent decoration-border hover:decoration-accent-dim inline-flex min-h-11 items-center text-base underline underline-offset-4 transition-colors duration-150"
+            >
+              {value}
+              {isExternal(href) && <span class="sr-only">&nbsp;(opens in a new tab)</span>}
+            </a>
+          </dd>
+        </>
+      ))
+    }
+  </dl>
+</section>

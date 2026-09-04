@@ -111,9 +111,16 @@ export const site = {
       value: 'taha.manaquib53@gmail.com',
       href: 'mailto:taha.manaquib53@gmail.com',
     },
-    // TODO(before launch): real URLs — the CV has these as `#` placeholders.
-    { label: 'github', value: 'github.com/…', href: '#' },
-    { label: 'linkedin', value: 'linkedin.com/in/…', href: '#' },
+    {
+      label: 'github',
+      value: 'github.com/TahaManaquib',
+      href: 'https://github.com/TahaManaquib',
+    },
+    {
+      label: 'linkedin',
+      value: 'linkedin.com/in/taha-manaquib',
+      href: 'https://www.linkedin.com/in/taha-manaquib/',
+    },
   ],
 
   // TODO(before launch): add the real PDF at `public/taha-resume.pdf`.

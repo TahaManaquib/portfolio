@@ -3,11 +3,8 @@ import Base from '../layouts/Base.astro';
 import Nav from '../components/Nav.astro';
 import Hero from '../components/Hero.astro';
 import Stack from '../components/Stack.astro';
+import Contact from '../components/Contact.astro';
 import { site } from '../data/site';
-
-// `#contact` below is still an ANCHOR PLACEHOLDER — replaced wholesale by its
-// own approved step (PHASES.md Phase 1).
-const placeholders = [{ id: 'contact', label: 'contact' }] as const;
 ---
 
 <Base title={site.meta.title} description={site.meta.description}>
@@ -17,13 +14,5 @@ const placeholders = [{ id: 'contact', label: 'contact' }] as const;
 
   <Stack />
 
-  {
-    placeholders.map(({ id, label }) => (
-      <section id={id} tabindex="-1" class="py-section border-border border-b last:border-b-0">
-        <p class="text-fg-muted font-mono text-sm">
-          <span class="text-accent">#{id}</span> — {label} section pending
-        </p>
-      </section>
-    ))
-  }
+  <Contact />
 </Base>
