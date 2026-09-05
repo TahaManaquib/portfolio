@@ -139,13 +139,17 @@ Build, in this order, one step at a time with approval between each:
    occupy the server for a service time, that time degrades as concurrency rises, and the
    feedback loop is what kills it. Crash expiry is derived from the clock, never from a flag a
    render loop has to clear.
-2. **Hidden bug icon** — crashing reveals the bug icon per CLAUDE.md's spec (low-opacity, tucked
-   near the button/input, appears only post-crash).
-3. **Attack toolkit** — clicking the bug icon reveals the attack panel.
-4. **Stages 2–5** — rate limiting → caching → queue → graceful degradation, each with its
+2. **The fix loop + stage 2** — persistence, the inline fix button, the middleware chain, reset,
+   and a real fixed-window rate limiter. Built before the bug icon because it closes one full
+   turn of the loop (crash → fix → spam stops working), which is the thing worth reviewing.
+3. **Hidden bug icon** — crashing reveals the bug icon per CLAUDE.md's spec (low-opacity, tucked
+   near the button/input, appears only post-crash). It is what makes stage 2 onwards breakable
+   on purpose rather than by luck.
+4. **Attack toolkit** — clicking the bug icon reveals the attack panel.
+5. **Stages 3–5** — rate limiting → caching → queue → graceful degradation, each with its
    corresponding attack and the "patched" state applied to older attacks. Treat each stage as
    its own approval step.
-5. **Remaining easter eggs** — logo click sequence, hidden terminal command (if not already
+6. **Remaining easter eggs** — logo click sequence, hidden terminal command (if not already
    done in Phase 2), hidden API-flavored 404 page.
 
 Instrument the unlock-worthy moments as plain events/flags so achievements can be layered on

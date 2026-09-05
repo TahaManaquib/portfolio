@@ -655,3 +655,95 @@
     padding-left: 0.85rem;
   }
 }
+
+/* --- API simulation: the defence chain and the inline fix offer ------------ */
+@layer components {
+  .api-chain {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .api-chain ol {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-accent);
+  }
+
+  /* Arrows between links, never before the first — the chain reads as a
+     pipeline the visitor assembled. */
+  .api-chain li + li::before {
+    content: '→';
+    margin-right: 0.5rem;
+    color: var(--color-fg-muted);
+  }
+
+  .api-reset {
+    margin-left: auto;
+    border: 0;
+    background: none;
+    padding: 0;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-fg-muted);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--color-border);
+    transition: color 150ms ease;
+  }
+
+  .api-reset:hover {
+    color: var(--color-fg);
+  }
+
+  .api-fixbox {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-width: 34rem;
+  }
+
+  .api-offer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0;
+  }
+
+  .api-apply {
+    display: inline-flex;
+    min-height: 2.25rem;
+    align-items: center;
+    padding-inline: 0.85rem;
+    border: 1px solid var(--color-accent-dim);
+    border-radius: 3px;
+    background-color: var(--color-bg);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-accent);
+    cursor: pointer;
+    transition:
+      background-color 150ms ease,
+      color 150ms ease;
+  }
+
+  .api-apply:hover {
+    background-color: var(--color-accent-faint);
+  }
+
+  .api-apply-blurb {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-fg-muted);
+  }
+}

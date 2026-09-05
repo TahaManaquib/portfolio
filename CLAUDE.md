@@ -244,6 +244,28 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
      cached/fallback responses or a polite 429 instead of dying. This is the capstone state —
      framed as "you built a production-grade API," not "it's now unbreakable."
 
+  **How fixes reach the visitor.** Attacks have a home (the bug icon); fixes need one too, or the
+  loop only works in one direction. Fixes appear **inline at the point of failure** — after a
+  crash, one button next to the postmortem line, with a one-line rationale (`+ rate limit — cap
+requests per window`). No second panel, no discovery required: it shows up exactly when it has
+  been earned, and the rationale teaches the concept without lecturing.
+
+  Applied fixes then render as a **middleware chain** above the endpoint —
+  `rate limit → cache → queue → breaker` — which starts empty and grows. That chain is the
+  progress indicator, and it is what makes the capstone land: the visitor can see the thing they
+  built. The two sides stay separate on purpose: the bug icon answers "how do I break it now",
+  the chain answers "what did I just learn".
+
+  **Every defence must actually defeat the attack it answers.** Sounds obvious; it is easy to get
+  wrong. The first build set the rate limit to 5 per window against a server capacity of 4, so a
+  client obeying the limit perfectly could still kill it — applying the fix changed nothing. A
+  limit must sit below capacity, and each new defence needs a test proving the _previous_ stage'''s
+  attack now fails against it.
+
+  **State rules:** progress persists to localStorage (a five-stage journey must survive a
+  reload). The visitor applies each fix themselves — nothing is automatic. A **reset wipes
+  everything** back to stage 1, and appears only once there is something to reset.
+
   **The hidden bug mechanic:** after the first crash (stage 1), a small bug icon appears —
   tucked at the edge of the fetch button or an adjacent input, low-opacity, easy to miss on a
   glance, similar treatment to the achievements icon (see below), but only appears post-crash.
