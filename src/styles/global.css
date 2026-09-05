@@ -97,14 +97,26 @@
    The single shared gutter.
 
    Full-bleed layout: content runs edge to edge, held off the viewport edges by
-   this padding alone. One clamp instead of breakpoints — 24px on a phone,
-   scaling with the viewport, capped at 64px so an ultrawide doesn't push the
-   content into a thin middle strip.
+   this padding alone. One clamp instead of breakpoints. The nav row and <main>
+   both use it, which is what keeps them aligned.
 
-   The nav row and <main> both use it, which is what keeps them aligned.
+   Read the three arguments as floor / slope / ceiling:
+     floor    1.5rem  — 24px, so a 360px phone keeps a usable column
+     slope    15vw - 2rem — grows with the viewport, offset so it starts small
+     ceiling  12rem   — 192px, the desktop indent, reached around 1490px
+
+   Resulting padding per side (and the content width left over):
+     360px  ->  24px   (312px)      1280px -> 160px   (960px)
+     768px  ->  83px   (602px)      1536px -> 192px  (1152px)
+    1024px  -> 122px   (780px)      2560px -> 192px  (2176px)
+
+   The ceiling matters: without it, 15vw on an ultrawide would squeeze the
+   content into a thin middle strip. The floor matters just as much — a bare
+   `clamp(12rem, ...)` puts 192px on each side of a 360px phone, which is more
+   padding than there is viewport.
    --------------------------------------------------------------------------- */
 @utility gutter {
-  padding-inline: clamp(1.5rem, 4vw, 4rem);
+  padding-inline: clamp(1.5rem, 15vw - 2rem, 12rem);
 }
 
 /* ---------------------------------------------------------------------------

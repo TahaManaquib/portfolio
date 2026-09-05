@@ -8,17 +8,20 @@
 // CLAUDE.md allows the résumé in the nav or the footer; it sits here because
 // the recruiter path should reach it without scrolling.
 //
+// It opens in a new tab rather than forcing a download: browsers render PDFs
+// inline, so a recruiter can read it immediately and still save it from the
+// viewer if they want. `download` would have committed them to a file first.
+//
 // Every link carries `min-h-9` (36px): small uppercase text is only ~17px tall,
 // which fails WCAG 2.5.8 Target Size (24x24 minimum). The padding is invisible
 // but makes the tap targets legal and comfortable on touch.
+
+import { site } from '../data/site';
 
 const links = [
   { href: '#stack', label: 'Stack' },
   { href: '#contact', label: 'Contact' },
 ] as const;
-
-// TODO(before launch): add the real PDF at `public/taha-resume.pdf`.
-const RESUME_HREF = '/taha-resume.pdf';
 ---
 
 <nav aria-label="Primary" class="border-border bg-bg sticky top-0 z-40 border-b">
@@ -45,11 +48,13 @@ const RESUME_HREF = '/taha-resume.pdf';
       }
       <li>
         <a
-          href={RESUME_HREF}
-          download
+          href={site.resumeHref}
+          target="_blank"
+          rel="noopener noreferrer"
           class="border-border text-fg-muted hover:border-accent-dim hover:text-accent inline-flex min-h-9 items-center rounded-sm border px-2.5 text-xs tracking-wider uppercase transition-colors duration-150 sm:text-sm"
         >
           Résumé
+          <span class="sr-only">&nbsp;(opens in a new tab)</span>
         </a>
       </li>
     </ul>

@@ -57,6 +57,8 @@ export interface SiteContent {
   };
   readonly contact: readonly ContactLink[];
   readonly resumeHref: string;
+  /** This site's own repo. Load-bearing: it is the only real code on display. */
+  readonly repoHref: string;
 }
 
 export const site = {
@@ -123,6 +125,9 @@ export const site = {
     },
   ],
 
-  // TODO(before launch): add the real PDF at `public/taha-resume.pdf`.
-  resumeHref: '/taha-resume.pdf',
+  // Served from `public/`. Renamed from "Taha Manaquib CV.pdf" so the URL needs
+  // no %20 escaping; the capitalised name still reads well once downloaded.
+  resumeHref: '/Taha-Manaquib-CV.pdf',
+
+  repoHref: 'https://github.com/TahaManaquib/portfolio',
 } as const satisfies SiteContent;
