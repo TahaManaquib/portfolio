@@ -39,15 +39,15 @@ import { DEFAULTS } from '../islands/api/engine';
           <div class="api-gauge-fill is-healthy" style="width:0%"></div>
         </div>
         <p class="api-gauge-meta">
-          <span>0 / {DEFAULTS.capacity} in flight</span>
+          <span>handling 0 of {DEFAULTS.capacity}</span>
           <span>{DEFAULTS.baseLatencyMs} ms</span>
         </p>
       </div>
 
       <dl class="api-totals">
         <div><dt>sent</dt><dd>0</dd></div>
-        <div><dt>200</dt><dd>0</dd></div>
-        <div><dt>503</dt><dd>0</dd></div>
+        <div><dt>answered <span class="api-code">200</span></dt><dd>0</dd></div>
+        <div><dt>failed <span class="api-code">503</span></dt><dd>0</dd></div>
       </dl>
     </div>
   </div>

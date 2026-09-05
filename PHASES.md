@@ -144,11 +144,88 @@ Build, in this order, one step at a time with approval between each:
    turn of the loop (crash → fix → spam stops working), which is the thing worth reviewing.
 3. **Hidden bug icon** — crashing reveals the bug icon per CLAUDE.md's spec (low-opacity, tucked
    near the button/input, appears only post-crash). It is what makes stage 2 onwards breakable
-   on purpose rather than by luck.
-4. **Attack toolkit** — clicking the bug icon reveals the attack panel.
+   on purpose rather than by luck. It opens the **defect report**: one entry per stage, the
+   current one `open` with its exploit spelled out, earlier ones struck through and labelled with
+   the defence that patched them, so the panel doubles as a changelog. Only stages the visitor
+   has actually reached are listed — the panel never spoils a weakness in a defence they have not
+   built yet.
+   - **The earned nudge.** From stage 2 the icon is the only route forward, so someone who misses
+     it hits a dead end. Rather than making it permanently more obvious, it gets easier to see
+     for a visitor who is visibly attacking and getting nowhere: two opacity steps, at 10 and 24
+     requests turned away since the last fix, cleared by a successful breach. A one-time step
+     change with a 200ms transition — never a loop. Nothing on this site pulses for attention.
+4. **Attack toolkit** — the open defect in the report gains a control that actually runs the
+   attack, since the stage-2 exploit (a boundary burst timed to a ~100ms window two seconds after
+   a probe request) is not something a human can perform by hand.
+   - **Attacks are volleys, not individual timers.** A volley is a group of requests fired on one
+     timestamp, so what reaches the limiter is "these went out together" and the attack depends
+     only on which side of the window boundary each volley lands — never on `setTimeout` being
+     accurate to 10ms.
+   - **The opening silence is load-bearing.** The limiter's window opens on the first request
+     after the previous one lapsed, so an exploit that just fires offsets from "now" lands at an
+     unknown phase and gets 429s. A full window of quiet before the probe is what makes the
+     boundary land at a known time regardless of when the visitor last clicked.
+   - **The fetch button is locked during a run**, or a stray manual click in the quiet gap resets
+     the window and breaks the attack.
+   - **A run that does not land must say so.** Browsers throttle timers in background tabs, so a
+     visitor who switches away mid-run returns to collapsed volleys that were simply rate
+     limited. Reverting the read-out silently makes the exploit look inert and puts them back at
+     the dead end the toolkit exists to remove.
 5. **Stages 3–5** — rate limiting → caching → queue → graceful degradation, each with its
    corresponding attack and the "patched" state applied to older attacks. Treat each stage as
    its own approval step.
+   - **Stage 3, the cache — built.** A bounded response cache keyed by path, sitting behind the
+     limiter so the request order matches the order the chain displays. A hit is answered from
+     memory and never occupies the origin, which is precisely why it defeats a burst that asks
+     for the same thing repeatedly. Notes worth keeping:
+     - **A cache needs a key, so the engine needed one too.** `send()` takes a path; a plain
+       click asks for `/taha`. Without that there is nothing for a cache to be a cache _of_.
+     - **The TTL must outlast the burst it defends against.** The boundary attack runs ~4s, so an
+       entry expiring inside that window would let the same-path burst through and the fix would
+       be theatre — the same class of bug as a rate limit set above capacity. Asserted in tests.
+     - **Attacks stack, they do not replace.** The limiter is still out front, so the cache-miss
+       flood keeps the boundary timing that beats it and _adds_ a different path per request.
+       Six requests, same schedule as stage 2, none of them answerable from memory.
+     - **No request coalescing:** a second request for a path whose miss is still in flight is
+       also a miss. That is how a plain cache behaves, and the limiter caps the pile-up.
+     - **Each defence earns its own number** in the totals the moment it is applied (`turned
+away` for the limiter, `reused` for the cache), so what the visitor built becomes visible
+       rather than implied.
+   - **Stage 4, the queue — built.** Requests that arrive with every worker busy join a line
+     instead of piling onto the server, so over-concurrency stops being a failure mode at all.
+     The failure _moves_ rather than disappearing: overload becomes "too many waiting".
+     - **The limiter had to become per-caller first, and this is why.** The arithmetic does not
+       work otherwise: a limit of 3 per 2s allows 1.5/s sustained (6 across a boundary) while the
+       server drains ~2.9/s, so arrival can never outrun the drain and no amount of timing fills
+       a queue. Counting per caller — the way a real limiter keyed by IP or API key does — opens
+       the honest route: the **multi-identity flood** already listed in CLAUDE.md's attack menu.
+     - **The best teaching moment in the progression.** Eight callers x three requests is exactly
+       the per-client allowance, so the attack triggers **zero 429s** — every client is perfectly
+       compliant and the system dies anyway. A per-client limit says nothing about the total,
+       which is the whole argument for global backpressure. Asserted in the test suite.
+     - **Overflow is fatal because there is no policy for "full" yet.** That missing policy is
+       precisely what the breaker adds, which is why backpressure is the fix this defect earns
+       rather than simply a deeper queue. Requests still waiting when it goes down fail with it.
+     - **The queue trades failures for latency, so the latency is shown.** Records carry
+       `waitedMs`, and a row that waited says so — otherwise the cost of the fix is invisible and
+       the queue reads as a free win.
+   - **Stage 5, the breaker — built. The API Simulation is complete.** Load shedding with
+     hysteresis: the breaker opens when the line gets deep and closes once it has drained well
+     back down. Two marks, not one, or it would flip state on every other request while the depth
+     sat on the boundary.
+     - **`tripAt` must sit below `queue.maxDepth`**, or the breaker opens only after the overflow
+       it exists to prevent has already happened. Same off-by-a-threshold family as a rate limit
+       above capacity or a cache TTL shorter than the burst. Asserted as a relationship, not a
+       number.
+     - **Where the shed check sits is the whole meaning of the stage.** It runs _after_ the
+       cache, so anything already known still gets answered while new work is refused. Degrading
+       gracefully means serving what you can and declining the rest — not going dark.
+     - **The capstone is checkable, not asserted.** Once every defence is applied all four
+       exploits become runnable again, so the visitor can throw the attack that killed stage 4 at
+       the finished stack and watch it report `held — the stack absorbed it`. "You built a
+       production-grade API" lands very differently when you can test it yourself.
+     - Verified: 200 requests from 40 callers produce **zero 503s**, the line peaks at 8 of 12,
+       and it returns to healthy on its own.
 6. **Remaining easter eggs** — logo click sequence, hidden terminal command (if not already
    done in Phase 2), hidden API-flavored 404 page.
 

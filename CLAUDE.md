@@ -221,6 +221,21 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
   above the button hands it over before the visitor has pressed anything. They should wonder what
   it is, press it, and find out. Explanations arrive only after a crash, and stay terse.
 
+  **Plain words carry the meaning; jargon rides along as a tag.** A recruiter must be able to
+  follow what just happened without a backend background, and the earlier build failed that —
+  "unbounded concurrency", "cap requests per window", "0 / 4 in flight" and a bare `503` explain
+  nothing to someone who does not already know. The rule is not to remove the technical terms,
+  which are half the point of the section, but to stop them being the only label:
+  - Every explanation — postmortems, fix blurbs, defect descriptions, exploit instructions — is
+    written in language that needs no background. Say what happens, not what it is called.
+  - The real name still appears, dimmed and secondary: a small tag beside the plain title, a
+    status code after the plain word. An engineer sees `down · 503` and `cache miss`; everyone
+    else reads the sentence and skips them.
+  - A blurb that only restates the name in more jargon is not a blurb. "Cap requests per window"
+    tells you nothing you did not get from "rate limit".
+  - Names in the middleware chain stay technical and unqualified — `rate limit → cache → queue →
+breaker` is the thing the visitor built, and it should read like a real stack.
+
   **The crash must be reachable by hand.** Tune it by measuring time-to-crash across sustained
   click rates, not by feel: casual clicking (up to ~3/second) survives indefinitely, deliberate
   mashing (4+/second) falls over in a second or two. An early build survived 15 clicks/second,
@@ -275,6 +290,19 @@ requests per window`). No second panel, no discovery required: it shows up exact
   as visibly "patched" (grayed out, e.g. "no longer works — cache added") rather than
   disappearing — this turns the panel into a lightweight changelog of the API's hardening and
   gives the whole thing a sense of progress even before you reach the end state.
+
+  **The icon is load-bearing, not a bonus.** Once the rate limiter is in, mashing the button
+  cannot get through at any speed — the only way forward is the timed attack the panel arms you
+  with. So a visitor who never spots the icon hits a dead end. It stays faint for anyone who
+  finds it on their own, but it gets **easier to see for someone visibly attacking and getting
+  nowhere**: two opacity steps, at 10 and 24 requests turned away since the last fix, cleared by
+  a successful breach. A one-time step change with a short transition — never a loop, never an
+  idle pulse. Do not "fix" the dead end by making the icon permanently obvious; that spends the
+  discovery for everyone to rescue a few.
+
+  The panel only ever lists stages the visitor has reached — the open defect plus the ones
+  already patched. Listing a weakness in a defence they have not built yet would hand over the
+  rest of the game.
 
   This system fully absorbs the old API Playground, System Status panel, and "Fix the Server"
   mini-game concepts. Do not build those as separate features alongside this.
