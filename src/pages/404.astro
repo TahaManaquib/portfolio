@@ -1,0 +1,73 @@
+---
+// The 404 page.
+//
+// Astro writes this to dist/404.html, which Cloudflare Pages serves for any
+// path that does not resolve. No server is involved in that — the host picks a
+// different file, which is exactly what the copy below says.
+//
+// The joke has to stay honest (CLAUDE.md): this site really is a folder of
+// prerendered files, so a page genuinely either exists or never did. It does
+// not pretend a request was handled, and it does not invent a status.
+//
+// Deliberately not showing the path the visitor tried: reading
+// location.pathname needs a script, and a joke is not worth putting JS on a
+// page that currently needs none.
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import { site } from '../data/site';
+
+const title = `404 — ${site.name}`;
+const description = 'That page does not exist.';
+
+// Same framing as the source view, so the two read as one idea — but with this
+// page's own real status and type. It deliberately does NOT reuse the source
+// view's `content-type: application/json`: this page is served as text/html,
+// and a framing block that misreports what it is would be precisely the kind of
+// decorative lie CLAUDE.md's honesty rule exists to prevent. The path is
+// elided because a static page cannot know it without shipping a script.
+const framing = ['GET /…', '', '404 Not Found', 'content-type: text/html'].join('\n');
+---
+
+<Base {title} {description} path="/404">
+  <Nav slot="nav" />
+
+  <section id="top" tabindex="-1" class="py-section-sm sm:py-section">
+    <p class="text-fg-muted font-mono text-xs tracking-wider uppercase">Not found</p>
+
+    <h1 class="text-display text-fg mt-4 font-medium">404</h1>
+
+    <pre
+      class="text-fg-muted border-border mt-8 w-fit max-w-full overflow-x-auto border-l pl-4 font-mono text-xs leading-relaxed">{framing}</pre>
+
+    <p class="text-fg mt-8 max-w-2xl text-lg text-balance sm:text-xl">
+      There is no router here to have made a mistake.
+    </p>
+
+    <p class="text-fg-muted mt-4 max-w-2xl text-base">
+      This site is a folder of files built ahead of time and handed to a CDN, so a page either
+      exists or it never did. This one never did.
+    </p>
+
+    <ul class="mt-10 flex flex-wrap gap-x-6 gap-y-3">
+      <li>
+        <a
+          href="/"
+          class="text-fg hover:text-accent decoration-border hover:decoration-accent-dim inline-flex min-h-11 items-center text-base underline underline-offset-4 transition-colors duration-150"
+        >
+          Back to the homepage
+        </a>
+      </li>
+      <li>
+        <a
+          href="/#contact"
+          class="text-fg-muted hover:text-fg decoration-border hover:decoration-accent-dim inline-flex min-h-11 items-center text-base underline underline-offset-4 transition-colors duration-150"
+        >
+          Contact
+        </a>
+      </li>
+    </ul>
+  </section>
+
+  <Footer slot="footer" />
+</Base>

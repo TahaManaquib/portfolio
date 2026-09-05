@@ -96,9 +96,10 @@ Build, one at a time with approval between each:
 4. **JSON signpost** — add the `interfaces` block to the content module so the source view
    advertises the terminal, its shortcut and its commands. Do this last: it must not advertise
    something that does not yet work.
-5. **`perf` and `curl`** — the commands that make the terminal a control surface rather than
-   another way to read the page. See CLAUDE.md for the constraints on `perf`; the short version
-   is that it must never print numbers it cannot stand behind.
+5. **`perf` and `curl`** — built, then **removed at Taha's request** along with the
+   `/api/whoami.json` easter egg. Do not rebuild them without an explicit instruction. The
+   terminal's listed commands are now `about`, `stack`, `contact`, `help`, `cls`, plus the hidden
+   one.
 
 **This is where "zero JS" ends.** ⌘K needs a listener, so the recruiter path goes from literally
 0 bytes to a small always-present loader plus an on-demand chunk. Measure both and say so
@@ -226,11 +227,50 @@ away` for the limiter, `reused` for the cache), so what the visitor built become
        production-grade API" lands very differently when you can test it yourself.
      - Verified: 200 requests from 40 callers produce **zero 503s**, the line peaks at 8 of 12,
        and it returns to healthy on its own.
-6. **Remaining easter eggs** — logo click sequence, hidden terminal command (if not already
-   done in Phase 2), hidden API-flavored 404 page.
+6. **Easter eggs — done.** Two ship: the hidden terminal command (`sudo hire taha`, built in
+   Phase 2) and the **backend-humour 404 page** (`src/pages/404.astro` → `dist/404.html`, which
+   Cloudflare Pages serves for any unresolved path — no server involved, which is what the copy
+   says). The logo click sequence was **cut**, and `/api/whoami.json` was built and then
+   **removed**; neither returns without an explicit instruction.
 
 Instrument the unlock-worthy moments as plain events/flags so achievements can be layered on
 later without rework — but no achievement UI now.
+
+### Checkpoint — cut the API Simulation back before Phase 4
+
+**The simulation is finished and it is too big. Do not start Phase 4 until this is resolved.**
+Taha's own words after stage 5 landed: _"i myself am not understanding the API endpoint part, how
+will others understand it"_ — the person who commissioned it cannot follow it, so a recruiter
+certainly cannot.
+
+The mechanics are not the problem; the legibility is. Every step was verified for "is this
+technically honest" and none for "can a person follow this". The diagnosis, recorded so it is not
+re-derived:
+
+- **The visitor stops being the one doing it.** Stage 1 is broken by hand and feels caused.
+  From stage 2 on you press "run exploit" and watch numbers, because those attacks genuinely
+  require machine timing. You become the audience for your own game.
+- **There is no sense of place.** Nothing ever states which stage you are on, how many there are,
+  or what is protecting the endpoint right now. It has to be reconstructed from a chain of words
+  and six counters.
+- **"Say nothing up front" got over-applied.** That rule exists to protect the _first_ discovery.
+  Applied forever it means the game still refuses to explain itself after the visitor has crashed
+  it and clearly opted in — which is obscurity, not mystery.
+- **Stage 4 depends on the multi-identity idea**, the hardest thing here to feel. Eight callers
+  each obeying their own limit cannot be experienced, only reported.
+
+**The leading proposal** (not yet decided — revisit with Taha): cut the _visitor's_ path to three
+stages, ending at the cache, and keep the full engine in the repo. CLAUDE.md already holds that
+the backend credibility comes from the code rather than a running system, and the queue,
+backpressure and breaker read well to an engineer who opens the source — which is the reader they
+were always for. A recruiter was never going to reach stage 5. Pair the cut with a persistent
+"where am I" line and with un-hiding the toolkit after the first crash, since three stages still
+needs to say where you are.
+
+Also open, and worth deciding at the same time: **whether the section deserves this much of the
+page at all.** It sits between Stack and Contact on a deliberately minimal portfolio and is the
+largest thing on it even at three stages. A version that keeps only the crash and one fix, with
+all remaining depth in the repo, is a legitimate outcome.
 
 **Prompt:**
 

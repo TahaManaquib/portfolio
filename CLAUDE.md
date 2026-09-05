@@ -75,9 +75,9 @@ build served from a CDN.
   sync, no remote store, no anonymous-ID service.
 - "System status" indicators are cosmetic. There is no real health check to run, because there
   is nothing to check.
-- The "hidden API endpoint" easter egg is a **prerendered static route** that returns
-  JSON-shaped content (e.g. `/api/whoami.json`). It looks like an endpoint; it is a build
-  artifact.
+- If a "hidden API endpoint" easter egg is ever built, it is a **prerendered static route**
+  returning JSON-shaped content — it looks like an endpoint; it is a build artifact. One was
+  built at `/api/whoami.json` and **removed at Taha's request**; do not rebuild it.
 
 This may change later, but only on an explicit instruction. Until then, treat any proposal that
 needs a server as out of scope and say so instead of building it.
@@ -185,17 +185,10 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
   - **The filter for new commands:** the terminal only earns a command that does something you
     cannot do by pointing. Without that rule it accumulates commands the way the source view
     accumulated features. It is a _control surface_, not a second way to read the page.
-    - **`perf`** — real transfer sizes and timings from the visitor's own page load, via the
-      Navigation and Resource Timing APIs. Nothing hard-coded: the site's speed claim becomes
-      verifiable in the reader's browser instead of asserted in a README. Three things it must
-      keep doing: count only same-origin resources (extensions and the dev toolbar inject into
-      the same timeline), say so loudly when running against the dev server (those numbers are
-      nothing like the built site's), and omit first paint when it postdates load — Chrome defers
-      paint in background tabs, and printing `first paint 3232ms` next to `load 69ms` reads as
-      broken rather than slow.
-    - **`curl /taha`** — prints the machine view as an HTTP response. Small, but it makes the
-      terminal, the source view and the `/api/whoami.json` easter egg one idea seen three ways.
-      Unknown paths return a real-looking 404.
+    - **Built and then removed at Taha's request: `perf` and `curl`.** They satisfied the
+      filter above and worked, but he did not want them. Do not rebuild either without an
+      explicit instruction. `perf` read real Navigation/Resource Timing numbers; `curl /taha`
+      printed the machine view as an HTTP response.
     - **`get` / `set` / `theme` / `reset` — Phase 3.5.** The payoff. Once the JSON viewer is
       editable, these drive the _same state_, so editing a value in the viewer shows up in `get`,
       and `theme #ff6b6b` recolours the site and the viewer together. That is what stops the
@@ -307,6 +300,20 @@ requests per window`). No second panel, no discovery required: it shows up exact
   This system fully absorbs the old API Playground, System Status panel, and "Fix the Server"
   mini-game concepts. Do not build those as separate features alongside this.
 
+  **It was built to this spec in full, and the result is too big — a cut-back is pending.** All
+  five stages exist and every defence provably defeats the attack it answers, but the whole is
+  harder to follow than any part of it, and Taha could not follow it himself. Treat the stage
+  list above as _what was built_, not as settled scope: the visitor-facing path is expected to
+  shrink, most likely to three stages ending at the cache, with the remaining engine kept in the
+  repo for the engineer who opens the source. See the checkpoint at the end of Phase 3 in
+  `PHASES.md` for the full diagnosis. **Do not extend this section further** — no new stages, no
+  new attacks, no new counters — until that cut has been made.
+
+  One rule already learned from it, which applies beyond this section: **"say nothing up front"
+  protects the first discovery, not every moment after it.** Once a visitor has crashed the
+  endpoint they have opted in, and continuing to withhold the shape of the thing stops being
+  mystery and becomes obscurity.
+
 - **Source view** — the site's second representation. Every piece of core content also exists as
   a machine-readable **HTTP/JSON API response** (`GET /taha` → `200 OK` → a JSON body), and a
   small control in the bottom-right corner swaps the page between the human view and the machine
@@ -384,8 +391,6 @@ requests per window`). No second panel, no discovery required: it shows up exact
     deliberate rather than a spoiler: the terminal is otherwise undiscoverable (⌘K is advertised
     nowhere), and a secret command leaking through an API response is a better joke than a
     secret command nobody finds. It stays honest because those commands genuinely exist.
-  - It shares its shape with the `/api/whoami.json` easter egg, so the two reinforce each other
-    instead of being two unrelated jokes.
 
 ### Achievements — DEFERRED, do not design the list yet
 
@@ -416,9 +421,16 @@ The _rules_ below are locked and still apply whenever achievements do get built:
 
 ### Easter eggs
 
-- Logo click sequence, hidden terminal command, a hidden "API endpoint" (a prerendered static
-  route returning JSON-shaped content — no server involved), and a backend-humor 404 page.
-  Discoverable through curiosity, never impossible to find.
+Two, both built: the **hidden terminal command** (`sudo hire taha`) and a **backend-humour 404
+page**. Discoverable through curiosity, never impossible to find.
+
+**Cut, and not to be rebuilt without an explicit instruction:** the logo click sequence (never
+built — the terminal and the source view already have entry points, and it could not unlock
+anything while achievements are deferred) and the `/api/whoami.json` route (built, then removed).
+
+The 404 is honest about itself: it is served as `text/html`, so its framing block says so rather
+than borrowing the source view's `application/json`. It does not report the path the visitor
+tried, because reading that needs a script and the page otherwise needs none.
 
 ### Visitor state / persistence
 
