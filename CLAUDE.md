@@ -52,6 +52,13 @@ nothing to hydrate. Its islands model maps 1:1 onto the code-splitting rule belo
 features physically cannot leak into the initial page load. Do not swap the framework without an
 explicit instruction.
 
+**On "zero JS", honestly:** through Phase 1 the site ships literally zero `<script>` tags, and
+that is worth protecting. From Phase 2 it necessarily becomes _near_-zero: the terminal opens on
+⌘K, which needs a key listener, and every island needs a small loader to fetch it on demand. The
+claim to make in the README is therefore "the recruiter path ships no JS until the visitor asks
+for it", with the loader measured — not "zero JS" once that stops being true. Do not quietly keep
+claiming zero.
+
 Tailwind notes for this project: keep the palette/type/spacing as theme tokens rather than
 scattering arbitrary values, so the design system stays enforceable. Markup readability still
 matters here — "view source" is a load-bearing part of the pitch — so extract a component
@@ -111,7 +118,8 @@ overrides "cool idea" every time the two conflict. Concretely:
   paint or first interaction on it, and never gate content behind it.
 - No animation libraries for simple UI transitions — CSS transitions/transforms only.
   Animations are 100–300ms, short and purposeful. Nothing animates by default/idly.
-- No theme toggle. Pick one theme (dark, in the spirit of both reference sites) and ship it.
+- No light/dark theme toggle. Dark, always — see "Background" and the palette-editor note under
+  Visual direction for the one deliberate exception.
 - Mobile-first and accessible from the start of each phase — not deferred to a "polish" phase.
 
 When in doubt: default to static, defer to on-demand, and cut anything whose engineering cost
@@ -135,7 +143,8 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
 - **Terminal** — entry via ⌘K or a small icon. Commands: `about`, `stack`, `contact`, `clear`,
   plus at least one hidden command (`sudo hire taha` → playful "permission denied").
 
-- **The API Simulation** — the site's single centerpiece interactive system. It replaces what
+- **The API Simulation** — the first of the site's two headline interactions, and the one that
+  demonstrates engineering depth. It replaces what
   would otherwise be three separate features (an API playground, a system-status panel, and a
   standalone mini-game) with one unified, narrative mechanic. Entirely client-side/simulated —
   no real backend calls, no real crash, no real risk — which keeps it fast and simple to build.
@@ -170,6 +179,80 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
 
   This system fully absorbs the old API Playground, System Status panel, and "Fix the Server"
   mini-game concepts. Do not build those as separate features alongside this.
+
+- **Source view** — the site's second representation. Every piece of core content also exists as
+  a machine-readable **HTTP/JSON API response** (`GET /taha` → `200 OK` → a JSON body), and a
+  small control in the bottom-right corner swaps the page between the human view and the machine
+  view. It makes "the portfolio _is_ the project" something a visitor can flip a switch and see,
+  rather than a claim in a paragraph.
+
+  **The site has two headline interactions, decided deliberately.** This replaces the earlier
+  "single centerpiece" rule, which the source view had already outgrown by accumulation:
+
+  1. **The API Simulation** — demonstrates engineering depth: rate limiting, caching, queueing,
+     circuit breaking. This is the evidence that Taha can build backends.
+  2. **The source view** — demonstrates the "the portfolio _is_ the project" idea, and invites a
+     visiting developer to make the site their own.
+
+  They are different kinds of thing, which is why two works here. Neither may absorb the other,
+  and the API Simulation is still the one a recruiter should be able to understand without
+  reading code.
+
+  Even with two, the source view has a boundary. Still out: multiple formats to choose from,
+  syntax-highlighting _themes_ (one restrained token scheme is fine), export, and raw-text JSON
+  editing. Anything beyond the list below needs an explicit decision.
+
+  What the source view is allowed to contain:
+  - Collapsible nodes (`<details>`/`<summary>`) with key/element counts, like a real JSON viewer.
+  - One restrained token colour scheme drawn from the existing palette — keys, string values,
+    numbers/booleans, punctuation. Legibility, not decoration. Punctuation carries structural
+    meaning in JSON, so it must clear AA; `--color-fg-subtle` is not eligible.
+  - A font-size control **scoped to the JSON only** — never a site-wide type control.
+  - **Editable values (Tier 1), deferred to Phase 3.5.** Values only: strings, numbers, booleans
+    edited in place, live-bound to the human view. No structural editing — no new keys, no
+    changing types, no raw-text JSON editing. Editing values in place means there is no invalid
+    state to handle, which is what keeps this small.
+    Rules for it when built: edits render as **text, never HTML** (a visitor typing a tag must
+    see the characters); edits are **ephemeral** — a reload restores the real content, nothing
+    is persisted to localStorage; and a reset control is provided.
+  - **Palette editing (Phase 3.5a).** Preset themes plus a custom colour picker, so a visiting
+    developer can recolour the site and see it become theirs. This is the reason the source view
+    counts as a headline interaction rather than a flourish.
+    - **Three seeds only:** background, foreground, accent. Every other token is _derived_ from
+      them with `color-mix()` — surface, borders, muted/subtle text, accent-dim/faint. Exposing
+      all ten tokens would guarantee incoherent results; deriving them means any three colours
+      produce a coherent system. This derivation is worth doing to the token definitions
+      regardless of the feature, because those relationships currently live in comments rather
+      than in code.
+    - **A live contrast readout is mandatory, not optional.** Each seed shows its ratio against
+      its pairing and whether it passes AA/AAA, updating as the visitor picks. Without it a
+      visitor can make the site unreadable in two clicks, on a site whose spec has a hard AA
+      floor. With it, the weakest part of the feature becomes a visible demonstration that
+      accessibility was thought about.
+    - Presets need **zero JS** (`html:has(#theme-x:checked)` reaches `:root`). Only the custom
+      picker needs an island, since CSS cannot read an `<input type="color">` value.
+    - Controls live in the source view's header strip, **not in the JSON body** — the body is
+      content; colours are viewer settings. Putting `theme.accent` in the payload would quietly
+      turn `GET /taha` from a profile response into a config document.
+    - **Ephemeral**, like every other edit: reload restores the real palette. Covered by reset.
+  - **Visitor comments (`//`), also Phase 3.5.** An annotation layer, never part of the payload:
+    JSON has no comment syntax, so putting them in the body would invalidate a response still
+    labelled `application/json`. Rendered JSONC-style beside the data and surfaced on the human
+    view. Same rules as above — text not HTML, ephemeral, reset-able — plus one more: comments are
+    **never persisted and never shared between visitors**. Shared comments are a guestbook, which
+    is on the not-building list and needs a backend and moderation.
+
+  Rules:
+  - **One source of truth.** Both views are generated at build time from a single typed content
+    module. The content is never written twice. If a change to the human view does not
+    automatically change the machine view, the implementation is wrong.
+  - **Zero JS.** The toggle is a visually-hidden checkbox plus `:checked ~` sibling selectors —
+    natively keyboard-operable and screen-reader-labelled, no island. State does not need to
+    survive a reload; this is a single-page site.
+  - **Honest content.** The machine view reflects what is actually on the page. No invented
+    fields, no fake status codes, no pretending a request happened.
+  - It shares its shape with the `/api/whoami.json` easter egg, so the two reinforce each other
+    instead of being two unrelated jokes.
 
 ### Achievements — DEFERRED, do not design the list yet
 
@@ -230,7 +313,7 @@ The _rules_ below are locked and still apply whenever achievements do get built:
 
 #### What the README must cover
 
-- What the site is, in two or three lines — including that the portfolio *is* the project.
+- What the site is, in two or three lines — including that the portfolio _is_ the project.
 - Live URL, near the top.
 - The stack, and **why** each piece was chosen — especially why Astro (zero client JS by default)
   and why there is no backend. The reasoning is the interesting part; a bare list is not.
@@ -250,13 +333,18 @@ anything the repo does not actually contain.
 
 - No Selected Work / projects section, no project cards, no case study pages, no portfolio
   gallery — do not add these back unless explicitly instructed.
+- No **light/dark theme toggle** — dark only, always. (Distinct from the source view's palette
+  editor, which is ephemeral, hidden in the discovery layer, and never changes the default.)
 - No dedicated About page/section, no dedicated Resume page/section, no achievement categories,
-  no idle icon animation, no sound effects, no theme toggle, no World State system, no separate
+  no idle icon animation, no sound effects, no World State system, no separate
   puzzle systems beyond the one mini-game, no guestbook (undecided — do not implement until
   explicitly instructed), no heavy animation library, no long loading sequences, no 3D/parallax/
   cyberpunk/pixel-art/RPG-XP-bar styling.
 - No backend of any kind: no server, no database, no API routes, no auth, no analytics service,
   no remote persistence. Do not add one unless explicitly instructed.
+- No background layer at all — no texture, no dot grid, no grain, no glow, no matrix/binary
+  rain, and nothing hover-reactive or cursor-following. See "Background" under Visual direction:
+  this was built and removed. The page ground is a flat colour.
 - Page transition polish: undecided — do not build unless explicitly instructed.
 
 ## Visual direction
@@ -265,9 +353,26 @@ anything the repo does not actually contain.
   elements — not the whole site.
 - Mostly neutral palette: one background/neutral, one text system, one subtle accent.
 - Lots of whitespace, thin subtle borders, strong hierarchy, minimal visual noise.
-- Single fixed theme (dark), no toggle.
+- Single fixed theme (**dark**), and **no light/dark toggle** — dark is the base, it is what
+  ships, and it is what every first visit sees. The palette editor in the source view (Phase
+  3.5a) is a different thing: a discovery-layer toy that recolours the tokens ephemerally for
+  one visitor. It never changes the default, and it is never a light-mode switch.
 - Encode the above as Tailwind theme tokens (colors, font families, spacing/type scale) so the
   palette and rhythm are enforced by the config rather than by discipline.
+
+### Background
+
+**There is no background layer. The page ground is a flat colour.**
+
+This was tried and removed. The machine view's own text was rendered site-wide as texture — first
+tiled in columns, then as one full-height column flush left. Even at 1.4% opacity, where the
+glyph pixels differ from the ground by about 3/255, it read as noise competing with the content
+rather than as texture. The source-view toggle turned out to be the better home for that idea:
+the JSON is legible on demand instead of half-visible all the time.
+
+Do not reintroduce a background — not the JSON texture, not a dot grid, not grain, not a glow —
+without an explicit instruction. Prior attempts and the reasons they were rejected are recorded
+here so this does not get rediscovered.
 
 ## Working conventions
 
@@ -277,6 +382,9 @@ anything the repo does not actually contain.
 - Code-split every interactive-layer feature: a Preact island dynamically imported on user
   action, never on page load. Verify with a build output check, not by assumption.
 - No backend. Visitor/unlock state is localStorage only.
+- All core content lives in one typed content module and is rendered from there. The human view
+  and the machine view (source view) are two renderings of the same data — never two copies of
+  it.
 - Every new interactive feature should map to something in the locked feature list above. If a
   request would add a new major interactive system not listed here, flag it before building —
   don't quietly expand scope.

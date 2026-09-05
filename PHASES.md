@@ -52,10 +52,18 @@ Build **in this order, one at a time, each approved before the next**:
 2. **Nav** — TAHA / STACK / CONTACT, anchor-based, plus the resume link (nav or footer, not its
    own section). Keyboard-accessible, works without JS.
 3. **Hero** — name, role, one-line pitch, CTA, with About folded in briefly.
-4. **Stack** — the tech list.
-5. **Contact** — email, GitHub, LinkedIn.
-6. **Footer** — resume + "view source" placement, whatever didn't land in the nav.
-7. **Meta pass** — OG/meta tags and a social preview image.
+4. **Content module** — extract every piece of core content into one typed source of truth and
+   re-point the hero at it. Everything after this renders from it, and so does the source view
+   in Phase 2 — which is why it comes before the remaining sections rather than after.
+5. **Stack** — the tech list.
+6. **Contact** — email, GitHub, LinkedIn.
+7. **Footer** — resume + "view source" placement, whatever didn't land in the nav.
+8. **Source view** — the bottom-right toggle that hides the human view and reveals the same data
+   as a readable, collapsible JSON response, rendered from the Phase 1 content module. Zero JS: a
+   checkbox plus sibling selectors, and native `<details>` for collapsing.
+   A site-wide background (the machine view's text as faint texture) was built here and then
+   removed — see CLAUDE.md "Background". Do not rebuild it.
+9. **Meta pass** — OG/meta tags and a social preview image.
 
 Throughout: static/SSG rendering, mobile-first, basic accessibility (semantic HTML, focus states).
 
@@ -77,21 +85,29 @@ Throughout: static/SSG rendering, mobile-first, basic accessibility (semantic HT
 **Goal:** the site starts to feel alive, still minimal by default. The bigger centerpiece
 (API Simulation) is deliberately split into its own phase — see Phase 3.
 
-Build:
+Build, one at a time with approval between each:
 
-- Terminal (⌘K entry, core commands, one hidden command)
+1. **Terminal** (⌘K entry, core commands, one hidden command)
+
+The **source view** was pulled forward into Phase 1 (step 8), because the background _is_ the
+machine view — the two are one idea and the background cannot be judged without the toggle that
+reveals it. Its editable-values tier is Phase 3.5 below.
 
 **Prompt:**
 
-> Plan Phase 2 from PHASES.md: the Terminal, per CLAUDE.md's "Interactive layer" section.
-> Confirm it's code-split so it adds no weight to the homepage's initial load — only fetched
-> when the visitor actually opens it. Note the `work` command is gone — commands are `about`,
-> `stack`, `contact`, `clear`, plus the hidden one. Build it in reviewable steps (shell/entry
-> first, then commands, then the hidden command) and stop for my approval between them.
+> Plan Phase 2 from PHASES.md: the Terminal and the Source view, per CLAUDE.md's "Interactive
+> layer" section. For the Terminal, confirm it's code-split so it adds no weight to the
+> homepage's initial load — only fetched when the visitor actually opens it. Note the `work`
+> command is gone — commands are `about`, `stack`, `contact`, `clear`, plus the hidden one. For
+> the Source view, confirm it is zero-JS (hidden checkbox + `:checked ~`), that it renders from
+> the Phase 1 content module rather than duplicating content, and that it stays small — the API
+> Simulation is still the headline interaction that carries the engineering depth. Build in
+> reviewable steps and stop for my approval
+> between them.
 
 ---
 
-## Phase 3 — The API Simulation (centerpiece) + easter eggs
+## Phase 3 — The API Simulation + easter eggs
 
 **Goal:** the discovery layer, built around the API Simulation as the spine.
 
@@ -128,6 +144,108 @@ later without rework — but no achievement UI now.
 > everything here is code-split and loads only on interaction, and that the whole system stays
 > purely client-side and simulated (there is no backend anywhere in this project). Build one step
 > at a time and stop for my approval after each.
+
+---
+
+## Phase 3.5 — Making the source view interactive
+
+Three independent features, deliberately split so any of them can be built, reordered, or cut
+without touching the others. Suggested order is cheapest-and-most-striking first.
+
+|          |                                                            | Needs JS?              |
+| -------- | ---------------------------------------------------------- | ---------------------- |
+| **3.5a** | Palette editing — presets, custom picker, contrast readout | presets no, picker yes |
+| **3.5b** | Tier 1 editable values                                     | yes                    |
+| **3.5c** | Visitor comments (`//`)                                    | yes                    |
+
+All three share: **text never HTML**, **ephemeral** (reload restores the real thing), one
+**reset** control, and an island that loads **only when the source view is opened**.
+
+---
+
+### 3.5a — Palette editing
+
+**Goal:** a visiting developer recolours the site and it becomes theirs. This is what makes the
+source view a headline interaction rather than a flourish.
+
+- **Three seeds only** — background, foreground, accent. Everything else derives from them via
+  `color-mix()`. Do this derivation to the tokens in `global.css` first; it is an improvement to
+  the design system on its own, and it is what stops any picked colour producing a broken theme.
+- **Contrast readout is mandatory.** Live ratio + AA/AAA verdict per seed as the visitor picks.
+  Non-negotiable: without it this feature can make the site unreadable, on a site with a hard AA
+  floor in its spec. With it, it demonstrates the opposite.
+- **Presets are zero JS** — `html:has(#theme-x:checked)` reaches `:root`, so a radio group is
+  enough. Only the custom picker needs the island.
+- Controls live in the source view header strip, never in the JSON body (see CLAUDE.md).
+- Never touches the default palette. Dark stays the base for every first visit.
+
+---
+
+### 3.5b — Editable values (Tier 1)
+
+**Goal:** the source view stops being read-only. A visitor can edit **values** in the JSON and
+watch the human view change when they toggle back.
+
+Why it earns its place: the source view _claims_ the two views are the same data. Editing one and
+seeing the other change is the proof. That is an architecture demonstration, not a party trick.
+
+Why it is here and not earlier: it is the largest single feature in the plan, and the API
+Simulation — the actual centerpiece — must exist first.
+
+**Scope is Tier 1 and stays Tier 1:**
+
+- Values only: strings, numbers, booleans, edited in place.
+- **No** structural editing: no new keys, no type changes, no raw-text JSON editing. Editing
+  values in place means there is no invalid-JSON state to design for, which is the whole reason
+  this tier is affordable.
+- Array add/remove is **Tier 2** — a possible follow-on, not part of this phase. Decide only
+  after Tier 1 has been used.
+
+### 3.5c — Visitor comments (`//`)
+
+Visitors can annotate the data with `//` comments, JSONC-style, and those annotations surface on
+the human view too.
+
+**Comments are an annotation layer, not part of the payload.** JSON has no comment syntax; `//`
+is JSONC. Putting comments inside the body would make the response invalid while the header still
+claims `content-type: application/json`, which breaks the honesty rule. So the serialised body
+stays valid JSON and comments live alongside it — the visitor's notes on the data, the way review
+comments sit beside a diff rather than inside the file. Render them JSONC-style (`// text` above
+the line they annotate) in a colour that is visibly _not_ part of the data.
+
+- One comment per node, attached by the same path→node map Tier 1 already needs for value
+  binding. That shared machinery is why comments are affordable here and would not have been on
+  their own.
+- **On the human view:** a small unobtrusive marker beside the bound element, revealing the
+  comment on hover/focus. This is the part that needs a design pass before it is built — the site
+  is deliberately low-noise, and scattered annotation markers are exactly the kind of thing that
+  erodes that. Propose the treatment and get it approved before implementing.
+- Same non-negotiables as the value editing below: **text, never HTML**; **ephemeral**, cleared on
+  reload; covered by the reset control.
+- **Never persisted and never shared between visitors.** Comments that other people can see are a
+  guestbook, which CLAUDE.md lists as explicitly not-building, and would drag in moderation and a
+  backend. Local to one browser session, always.
+
+Non-negotiables:
+
+1. Edits render as **text, never HTML**. A visitor typing `<img onerror=...>` sees characters.
+   Cheap now; a real vulnerability to retrofit if anything ever persists or is shared.
+2. Edits are **ephemeral** — a reload restores the real content. Do not persist to localStorage:
+   a returning visitor finding the site renamed is confusing, not delightful.
+3. A visible **reset** control.
+4. The **background stays static text**. Only the revealed source view becomes editable, which
+   also keeps focusable controls out of the `aria-hidden` layer.
+5. The island loads **only when the source view is opened** — never on the recruiter path.
+
+**Prompt:**
+
+> Plan Phase 3.5 from PHASES.md: Tier 1 editable values plus `//` comments in the source view.
+> Read CLAUDE.md's "Source view" section first. Values only — no new keys, no type changes, no
+> raw-text editing. Comments are an annotation layer, not part of the JSON body, and their
+> treatment on the human view needs my approval before you build it.
+> Confirm edits render as text not HTML, that they are ephemeral with a reset control, that the
+> background stays static, and that the island loads only when the source view is opened. Build
+> one step at a time and stop for my approval after each.
 
 ---
 

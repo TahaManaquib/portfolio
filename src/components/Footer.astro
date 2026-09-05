@@ -1,0 +1,35 @@
+---
+// Footer — the "view source" link, plus attribution.
+//
+// The résumé deliberately does NOT repeat here. It already sits in the nav,
+// and the nav is sticky, so it is on screen at every scroll position; a second
+// copy would be noise rather than convenience.
+//
+// "View source" carries real weight on this site: no projects are shown, so the
+// repo is the only actual code a visitor can inspect (CLAUDE.md).
+//
+// Link styling matches the Contact section — underlined, not colour-only, per
+// WCAG 1.4.1.
+import { site } from '../data/site';
+
+// Build-time. The site is static and rebuilt on deploy, so this stays current.
+const year = new Date().getFullYear();
+---
+
+<footer class="border-border border-t">
+  <div
+    class="gutter flex flex-col gap-2 py-8 sm:flex-row sm:items-center sm:justify-between sm:gap-6"
+  >
+    <a
+      href={site.repoHref}
+      target="_blank"
+      rel="noopener noreferrer"
+      class="text-fg hover:text-accent decoration-border hover:decoration-accent-dim inline-flex min-h-11 w-fit items-center text-sm underline underline-offset-4 transition-colors duration-150"
+    >
+      View source
+      <span class="sr-only">&nbsp;(opens in a new tab)</span>
+    </a>
+
+    <p class="text-fg-muted font-mono text-xs">&copy; {year} {site.name}</p>
+  </div>
+</footer>

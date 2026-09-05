@@ -8,7 +8,8 @@
     "build": "astro build",
     "preview": "astro preview",
     "check": "astro check",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "og": "node scripts/generate-og.mjs"
   },
   "dependencies": {
     "@astrojs/preact": "^5.0.1",

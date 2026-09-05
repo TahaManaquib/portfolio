@@ -7,6 +7,8 @@ import '../styles/global.css';
 // Only the sans is preloaded. The mono is used selectively (technical/system
 // elements, mostly below the fold) and shouldn't compete with first paint.
 import interWoff2 from '@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url';
+import SourceView from '../components/SourceView.astro';
+import { site } from '../data/site';
 
 interface Props {
   title: string;
@@ -17,6 +19,12 @@ interface Props {
 
 const { title, description, path = '/' } = Astro.props;
 const canonical = new URL(path, Astro.site);
+
+// Social scrapers do not resolve relative URLs, so og:image must be absolute.
+// It resolves against `site` in astro.config.mjs — which is still a placeholder
+// domain, so this is one of the things to fix before launch.
+const ogImage = new URL('/og.png', Astro.site);
+const OG_IMAGE_ALT = `${site.name} — ${site.role}. ${site.pitch.lead}.`;
 ---
 
 <!doctype html>
@@ -31,13 +39,42 @@ const canonical = new URL(path, Astro.site);
 
     <link rel="preload" href={interWoff2} as="font" type="font/woff2" crossorigin />
 
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
     <meta name="color-scheme" content="dark" />
     <meta name="theme-color" content="#0b0c0e" />
+
+    {
+      /* Open Graph. Twitter reads these too, so only the card type and the alt
+        text need repeating under the twitter: prefix. */
+    }
+    <meta property="og:type" content="profile" />
+    <meta property="og:site_name" content={site.name} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={OG_IMAGE_ALT} />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image:alt" content={OG_IMAGE_ALT} />
 
     <slot name="head" />
   </head>
 
   <body class="min-h-dvh">
+    {
+      /* Source-view switch. It is first in <body> so sibling selectors in
+        global.css can reach everything it controls. Zero JS — a real checkbox,
+        so it is keyboard-operable and announced correctly for free. */
+    }
+    <input type="checkbox" id="source-view" class="sr-only" />
+
     <a
       href="#main"
       class="focus:bg-surface focus:text-fg sr-only rounded-sm focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-2"
@@ -47,10 +84,18 @@ const canonical = new URL(path, Astro.site);
 
     <slot name="nav" />
 
-    <main id="main" class="max-w-content mx-auto w-full px-6">
+    <main id="main" class="gutter w-full">
       <slot />
     </main>
 
     <slot name="footer" />
+
+    <SourceView />
+
+    <label for="source-view" class="source-toggle" title="Toggle source view">
+      <span class="glyph" aria-hidden="true">{'{ }'}</span>
+      <span class="when-off sr-only">View source data</span>
+      <span class="when-on sr-only">Back to the site</span>
+    </label>
   </body>
 </html>

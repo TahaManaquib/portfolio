@@ -51,6 +51,9 @@
   /* Text system */
   --color-fg: #e6e7e9;
   --color-fg-muted: #8b8f96;
+  /* NOT AA-safe for text: 3.1:1 on --color-bg, below the 4.5:1 floor. Use it
+     only for decorative marks (separators, rules, icons that repeat adjacent
+     text). Any real text belongs on --color-fg-muted (6.0:1) or brighter. */
   --color-fg-subtle: #5c6068;
 
   /* Thin subtle borders */
@@ -81,8 +84,39 @@
   --spacing-section: 6rem;
   --spacing-section-sm: 4rem;
 
-  /* The single content column width */
-  --container-content: 44rem;
+  /* The layout is full-bleed — there is no centered max-width column. Width is
+     controlled by the `.gutter` edge padding below instead.
+
+     Long-form prose still gets a measure: a paragraph run edge-to-edge on a
+     wide monitor is unreadable. Only paragraphs are constrained; headings and
+     layout content (stack list, contact row) use the full width. */
+  --container-text: 36rem;
+}
+
+/* ---------------------------------------------------------------------------
+   The single shared gutter.
+
+   Full-bleed layout: content runs edge to edge, held off the viewport edges by
+   this padding alone. One clamp instead of breakpoints. The nav row and <main>
+   both use it, which is what keeps them aligned.
+
+   Read the three arguments as floor / slope / ceiling:
+     floor    1.5rem  — 24px, so a 360px phone keeps a usable column
+     slope    15vw - 2rem — grows with the viewport, offset so it starts small
+     ceiling  12rem   — 192px, the desktop indent, reached around 1490px
+
+   Resulting padding per side (and the content width left over):
+     360px  ->  24px   (312px)      1280px -> 160px   (960px)
+     768px  ->  83px   (602px)      1536px -> 192px  (1152px)
+    1024px  -> 122px   (780px)      2560px -> 192px  (2176px)
+
+   The ceiling matters: without it, 15vw on an ultrawide would squeeze the
+   content into a thin middle strip. The floor matters just as much — a bare
+   `clamp(12rem, ...)` puts 192px on each side of a 360px phone, which is more
+   padding than there is viewport.
+   --------------------------------------------------------------------------- */
+@utility gutter {
+  padding-inline: clamp(1.5rem, 15vw - 2rem, 12rem);
 }
 
 /* ---------------------------------------------------------------------------
@@ -128,8 +162,104 @@
     border-radius: 2px;
   }
 
+  /* Section anchor targets carry tabindex="-1" so following a nav link moves
+     focus into the section, not just the viewport. Focus still moves (screen
+     readers announce the section); we only drop the ring, because a 2px outline
+     drawn around an entire section is noise and the scroll is already the
+     visible feedback for sighted users. Interactive elements keep their ring. */
+  section[tabindex='-1']:focus,
+  section[tabindex='-1']:focus-visible {
+    outline: none;
+  }
+
   ::selection {
     background-color: var(--color-accent);
     color: var(--color-bg);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Source view — the human view / machine view switch.
+
+   These rules are global rather than scoped because they reach slotted content
+   (<nav>, <footer>) that a component's scoped styles cannot see.
+
+   The mechanism is a checkbox first in <body> plus sibling combinators: no JS,
+   natively keyboard-operable, and announced as a checkbox by screen readers.
+   The hidden branch is `display: none`, which also drops it out of the tab
+   order and the accessibility tree — which is why the collapsible JSON tree can
+   carry focusable <summary> elements without ever being focusable-while-hidden.
+   --------------------------------------------------------------------------- */
+@layer components {
+  .source-view {
+    display: none;
+  }
+
+  #source-view:checked ~ .source-view {
+    display: block;
+  }
+
+  /* Hide the human view wholesale. The skip link goes too: it points at
+     #main, which no longer exists on screen. */
+  #source-view:checked ~ a[href='#main'],
+  #source-view:checked ~ nav,
+  #source-view:checked ~ main,
+  #source-view:checked ~ footer {
+    display: none;
+  }
+
+  .source-toggle {
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    z-index: 50;
+    display: inline-flex;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    background-color: var(--color-bg);
+    color: var(--color-fg-muted);
+    cursor: pointer;
+    transition:
+      color 150ms ease,
+      border-color 150ms ease;
+  }
+
+  .source-toggle .glyph {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: -0.05em;
+  }
+
+  .source-toggle:hover {
+    color: var(--color-accent);
+    border-color: var(--color-accent-dim);
+  }
+
+  #source-view:focus-visible ~ .source-toggle {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  #source-view:checked ~ .source-toggle {
+    color: var(--color-accent);
+    border-color: var(--color-accent-dim);
+  }
+
+  /* Only one of the two labels exists at a time, so the accessible name of the
+     toggle always describes what activating it will do. */
+  .source-toggle .when-on {
+    display: none;
+  }
+
+  #source-view:checked ~ .source-toggle .when-off {
+    display: none;
+  }
+
+  #source-view:checked ~ .source-toggle .when-on {
+    display: inline;
   }
 }

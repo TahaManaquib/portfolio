@@ -1,14 +1,21 @@
 ---
 import Base from '../layouts/Base.astro';
-
-// Foundation only. Sections (nav, hero, stack, contact, footer) land here in
-// the following approved steps — see PHASES.md Phase 1.
+import Nav from '../components/Nav.astro';
+import Hero from '../components/Hero.astro';
+import Stack from '../components/Stack.astro';
+import Contact from '../components/Contact.astro';
+import Footer from '../components/Footer.astro';
+import { site } from '../data/site';
 ---
 
-<Base title="Taha — Backend Developer" description="Backend developer. This site is the project.">
-  <div class="py-section">
-    <p class="text-fg-muted font-mono text-sm">
-      foundation ready — <span class="text-accent">sections pending</span>
-    </p>
-  </div>
+<Base title={site.meta.title} description={site.meta.description}>
+  <Nav slot="nav" />
+
+  <Hero />
+
+  <Stack />
+
+  <Contact />
+
+  <Footer slot="footer" />
 </Base>

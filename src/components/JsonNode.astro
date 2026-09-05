@@ -1,0 +1,174 @@
+---
+// One node of the JSON tree, rendered recursively via <Astro.self />.
+//
+// Branches (objects/arrays) are native <details>/<summary>, so collapsing is
+// real HTML with real keyboard support and zero JS. Collapsed nodes show a
+// count the way a real JSON viewer does: `"stack": {…} 2 keys`.
+//
+// Whitespace warning: Astro preserves whitespace between sibling template
+// nodes (unlike JSX, which strips newlines), so an indented <span> on its own
+// line renders as a stray space mid-token. Every inline run below is therefore
+// emitted as a single array expression. Block-level children are safe —
+// whitespace between blocks collapses away.
+interface Props {
+  /** Object key. Absent for array elements and for the root. */
+  name?: string;
+  value: unknown;
+  /** Controls the trailing comma. */
+  last?: boolean;
+}
+
+const { name, value, last = true } = Astro.props;
+
+const isArray = Array.isArray(value);
+const isObject = typeof value === 'object' && value !== null && !isArray;
+const isBranch = isArray || isObject;
+
+const entries: [string | undefined, unknown][] = isArray
+  ? (value as unknown[]).map((v) => [undefined, v])
+  : isObject
+    ? Object.entries(value as Record<string, unknown>)
+    : [];
+
+const openBrace = isArray ? '[' : '{';
+const closeBrace = isArray ? ']' : '}';
+const n = entries.length;
+const countLabel = isArray ? `${n} item${n === 1 ? '' : 's'}` : `${n} key${n === 1 ? '' : 's'}`;
+
+function tokenClass(v: unknown): string {
+  if (typeof v === 'string') return 'tok-str';
+  if (typeof v === 'number') return 'tok-num';
+  return 'tok-bool';
+}
+
+const literal = typeof value === 'string' ? JSON.stringify(value) : String(value);
+
+const keyParts = name === undefined ? [] : [`"${name}"`];
+---
+
+{
+  /* Empty object or array: no point in a disclosure widget. */
+  isBranch && n === 0 && (
+    <div class="row">
+      {[
+        ...keyParts.map((k) => <span class="tok-key">{k}</span>),
+        name === undefined ? null : <span class="tok-p colon">:</span>,
+        <span class="tok-p">{openBrace + closeBrace}</span>,
+        last ? null : <span class="tok-p">,</span>,
+      ]}
+    </div>
+  )
+}
+
+{
+  isBranch && n > 0 && (
+    <details open class="node">
+      <summary class="row">
+        {[
+          ...keyParts.map((k) => <span class="tok-key">{k}</span>),
+          name === undefined ? null : <span class="tok-p colon">:</span>,
+          <span class="tok-p">{openBrace}</span>,
+          <span class="hint">
+            {[
+              <span class="tok-p">…{closeBrace}</span>,
+              last ? null : <span class="tok-p">,</span>,
+              <span class="count">{countLabel}</span>,
+            ]}
+          </span>,
+        ]}
+      </summary>
+
+      <div class="children">
+        {entries.map(([k, v], i) => (
+          <Astro.self name={k} value={v} last={i === n - 1} />
+        ))}
+      </div>
+
+      <div class="row">
+        {[<span class="tok-p">{closeBrace}</span>, last ? null : <span class="tok-p">,</span>]}
+      </div>
+    </details>
+  )
+}
+
+{
+  !isBranch && (
+    <div class="row">
+      {[
+        ...keyParts.map((k) => <span class="tok-key">{k}</span>),
+        name === undefined ? null : <span class="tok-p colon">:</span>,
+        <span class={tokenClass(value)}>{literal}</span>,
+        last ? null : <span class="tok-p">,</span>,
+      ]}
+    </div>
+  )
+}
+
+<style>
+  .row {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  /* Indentation is structural: each nested level insets its children. */
+  .children {
+    padding-left: 1.5ch;
+  }
+
+  summary {
+    cursor: pointer;
+    list-style: none;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  /* A disclosure arrow that reads as part of the code rather than as UI. */
+  summary::before {
+    content: '▾';
+    display: inline-block;
+    width: 1.5ch;
+    margin-left: -1.5ch;
+    color: var(--color-fg-subtle);
+  }
+
+  details:not([open]) > summary::before {
+    content: '▸';
+  }
+
+  summary:hover::before,
+  summary:focus-visible::before {
+    color: var(--color-accent);
+  }
+
+  /* `…}` and the count only exist while the node is closed. */
+  details[open] > summary .hint {
+    display: none;
+  }
+
+  .count {
+    margin-left: 1ch;
+    color: var(--color-fg-muted);
+    font-style: italic;
+  }
+
+  /* Token colours. Punctuation carries structural meaning in JSON, so it uses
+     fg-muted (6.0:1) rather than fg-subtle, which fails AA. */
+  .tok-key {
+    color: var(--color-fg);
+  }
+  .tok-str {
+    color: var(--color-accent);
+  }
+  .tok-num,
+  .tok-bool {
+    color: var(--color-accent-dim);
+  }
+  .tok-p {
+    color: var(--color-fg-muted);
+  }
+  .colon {
+    margin-right: 0.5ch;
+  }
+</style>

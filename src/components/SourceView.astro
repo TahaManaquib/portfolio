@@ -1,0 +1,139 @@
+---
+// The machine view, revealed when the bottom-right toggle is on.
+//
+// Same data as the human view and the background — all three read from `site`.
+// Nothing here is retyped content.
+//
+// Zero JS throughout: the reveal is a checkbox in Base.astro plus sibling
+// selectors in global.css; the font-size control is radios plus `:checked ~`.
+//
+// This is deliberately NOT a second centerpiece (CLAUDE.md). It collapses and
+// it resizes. It does not edit — that is Tier 1, Phase 3.5.
+import { site } from '../data/site';
+import { machineRequestLine, machineStatusLines } from '../data/machine';
+import JsonNode from './JsonNode.astro';
+
+// Scoped to this JSON view only — never a site-wide type control. The small
+// end of the range is for fitting more structure on screen, not for reading.
+const SIZES = [8, 9, 10, 11] as const;
+const DEFAULT_SIZE = 11;
+
+// Built here rather than inline in the template: a `.join('\n')` inside the
+// markup is easy to mangle, and the frontmatter is where logic belongs.
+const framing = [machineRequestLine, '', ...machineStatusLines].join('\n');
+---
+
+<div class="source-view gutter">
+  {
+    /* The radios must be siblings of `.tree` for `~` to reach it, so they sit
+      here rather than beside their labels. `for`/`id` still pairs them up, and
+      the labels render up in the header where they belong. */
+  }
+  {
+    SIZES.map((px) => (
+      <input
+        type="radio"
+        name="json-size"
+        id={`json-size-${px}`}
+        class="sr-only"
+        checked={px === DEFAULT_SIZE}
+      />
+    ))
+  }
+
+  <div class="head">
+    <pre class="framing">{framing}</pre>
+
+    <div class="sizes" role="group" aria-label="JSON font size">
+      {SIZES.map((px) => <label for={`json-size-${px}`}>{px}</label>)}
+    </div>
+  </div>
+
+  <div class="tree">
+    <JsonNode value={site} />
+  </div>
+</div>
+
+<style>
+  .source-view {
+    position: relative;
+    z-index: 1;
+    padding-block: 2rem 6rem;
+    font-family: var(--font-mono);
+    line-height: 1.7;
+  }
+
+  .head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 1.25rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .framing {
+    margin: 0;
+    font-size: 12px;
+    color: var(--color-fg-muted);
+    white-space: pre-wrap;
+  }
+
+  .sizes {
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  .sizes label {
+    display: inline-flex;
+    min-width: 2.25rem;
+    min-height: 2.25rem;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--color-border);
+    border-radius: 2px;
+    font-size: 11px;
+    color: var(--color-fg-muted);
+    cursor: pointer;
+    transition:
+      color 150ms ease,
+      border-color 150ms ease;
+  }
+
+  .sizes label:hover {
+    color: var(--color-fg);
+  }
+
+  /* Active state + focus ring, reaching forward from the hidden radio. */
+  #json-size-8:checked ~ .head label[for='json-size-8'],
+  #json-size-9:checked ~ .head label[for='json-size-9'],
+  #json-size-10:checked ~ .head label[for='json-size-10'],
+  #json-size-11:checked ~ .head label[for='json-size-11'] {
+    color: var(--color-accent);
+    border-color: var(--color-accent-dim);
+  }
+
+  #json-size-8:focus-visible ~ .head label[for='json-size-8'],
+  #json-size-9:focus-visible ~ .head label[for='json-size-9'],
+  #json-size-10:focus-visible ~ .head label[for='json-size-10'],
+  #json-size-11:focus-visible ~ .head label[for='json-size-11'] {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  /* The whole point of the control: the size applies to the JSON only. */
+  #json-size-8:checked ~ .tree {
+    font-size: 8px;
+  }
+  #json-size-9:checked ~ .tree {
+    font-size: 9px;
+  }
+  #json-size-10:checked ~ .tree {
+    font-size: 10px;
+  }
+  #json-size-11:checked ~ .tree {
+    font-size: 11px;
+  }
+</style>

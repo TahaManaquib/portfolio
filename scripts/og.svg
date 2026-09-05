@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#0b0c0e"/>
+  <rect x="0.5" y="0.5" width="1199" height="629" fill="none" stroke="#1f2226"/>
+
+  <text x="96" y="126" font-family="Consolas, 'DejaVu Sans Mono', 'Courier New', monospace" font-size="22" letter-spacing="3.2" fill="#8b8f96">
+    BACKEND-FOCUSED FULL STACK ENGINEER
+  </text>
+
+  <text x="96" y="248" font-family="'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="86" font-weight="600" fill="#e6e7e9">
+    Taha Manaquib
+  </text>
+
+  <text x="96" y="330" font-family="'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="36" fill="#e6e7e9">
+    <tspan x="96" dy="0">I build the parts of a SaaS product that have to be</tspan><tspan x="96" dy="52">right — <tspan fill="#6ee7a8">authorization</tspan>, <tspan fill="#6ee7a8">billing</tspan>, and <tspan fill="#6ee7a8">integrations</tspan>.</tspan>
+  </text>
+
+  <circle cx="102" cy="500" r="6" fill="#6ee7a8"/>
+  <text x="120" y="507" font-family="Consolas, 'DejaVu Sans Mono', 'Courier New', monospace" font-size="21" letter-spacing="2.4" fill="#8b8f96">
+    OPEN TO REMOTE &amp; CONTRACT WORK
+  </text>
+
+  <text x="1104" y="507" text-anchor="end" font-family="Consolas, 'DejaVu Sans Mono', 'Courier New', monospace" font-size="21" fill="#8b8f96">
+    github.com/TahaManaquib
+  </text>
+</svg>
