@@ -52,6 +52,13 @@ nothing to hydrate. Its islands model maps 1:1 onto the code-splitting rule belo
 features physically cannot leak into the initial page load. Do not swap the framework without an
 explicit instruction.
 
+**On "zero JS", honestly:** through Phase 1 the site ships literally zero `<script>` tags, and
+that is worth protecting. From Phase 2 it necessarily becomes _near_-zero: the terminal opens on
+⌘K, which needs a key listener, and every island needs a small loader to fetch it on demand. The
+claim to make in the README is therefore "the recruiter path ships no JS until the visitor asks
+for it", with the loader measured — not "zero JS" once that stops being true. Do not quietly keep
+claiming zero.
+
 Tailwind notes for this project: keep the palette/type/spacing as theme tokens rather than
 scattering arbitrary values, so the design system stays enforceable. Markup readability still
 matters here — "view source" is a load-bearing part of the pitch — so extract a component
@@ -180,8 +187,28 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
   **This is a distinct feature, NOT a second centerpiece.** The API Simulation remains the
   single centerpiece interactive system — it is the one that demonstrates engineering depth
   (rate limiting, caching, queueing, circuit breaking). The source view demonstrates concept and
-  taste, and it is small on purpose. Do not let it grow into a rival system: no editing, no
-  multiple formats to choose from, no syntax-highlighting themes, no export.
+  taste. Do not let it grow into a rival system: no multiple formats to choose from, no
+  syntax-highlighting _themes_ (one restrained token scheme is fine), no export.
+
+  What the source view is allowed to contain:
+  - Collapsible nodes (`<details>`/`<summary>`) with key/element counts, like a real JSON viewer.
+  - One restrained token colour scheme drawn from the existing palette — keys, string values,
+    numbers/booleans, punctuation. Legibility, not decoration. Punctuation carries structural
+    meaning in JSON, so it must clear AA; `--color-fg-subtle` is not eligible.
+  - A font-size control **scoped to the JSON only** — never a site-wide type control.
+  - **Editable values (Tier 1), deferred to Phase 3.5.** Values only: strings, numbers, booleans
+    edited in place, live-bound to the human view. No structural editing — no new keys, no
+    changing types, no raw-text JSON editing. Editing values in place means there is no invalid
+    state to handle, which is what keeps this small.
+    Rules for it when built: edits render as **text, never HTML** (a visitor typing a tag must
+    see the characters); edits are **ephemeral** — a reload restores the real content, nothing
+    is persisted to localStorage; and a reset control is provided.
+  - **Visitor comments (`//`), also Phase 3.5.** An annotation layer, never part of the payload:
+    JSON has no comment syntax, so putting them in the body would invalidate a response still
+    labelled `application/json`. Rendered JSONC-style beside the data and surfaced on the human
+    view. Same rules as above — text not HTML, ephemeral, reset-able — plus one more: comments are
+    **never persisted and never shared between visitors**. Shared comments are a guestbook, which
+    is on the not-building list and needs a backend and moderation.
 
   Rules:
   - **One source of truth.** Both views are generated at build time from a single typed content
@@ -281,8 +308,9 @@ anything the repo does not actually contain.
   cyberpunk/pixel-art/RPG-XP-bar styling.
 - No backend of any kind: no server, no database, no API routes, no auth, no analytics service,
   no remote persistence. Do not add one unless explicitly instructed.
-- No animated, hover-reactive, or cursor-following background. No matrix/binary rain. The
-  background is static texture only — see "Background" under Visual direction.
+- No background layer at all — no texture, no dot grid, no grain, no glow, no matrix/binary
+  rain, and nothing hover-reactive or cursor-following. See "Background" under Visual direction:
+  this was built and removed. The page ground is a flat colour.
 - Page transition polish: undecided — do not build unless explicitly instructed.
 
 ## Visual direction
@@ -297,21 +325,17 @@ anything the repo does not actually contain.
 
 ### Background
 
-The site has one site-wide background layer, and it is **the machine view's text rendered at
-~2–3% opacity** — texture that happens to be meaningful, rather than decoration. It must read as
-almost nothing: if a visitor can tell what it says without the source view turned on, it is too
-strong.
+**There is no background layer. The page ground is a flat colour.**
 
-- **Static. No hover reaction, no cursor tracking, no animation, no motion of any kind.** The
-  source-view toggle is the reveal; the background itself never responds to the pointer. This is
-  deliberate — an earlier hover-reactive treatment was built and rejected for competing with the
-  content.
-- Identical on mobile and desktop. There is no hover on touch, so a hover-dependent background
-  would simply be missing there; a static one is the same everywhere.
-- It sits behind everything and must never pull real text below the AA contrast floor. Verify
-  contrast with the background in place, not against the bare background colour.
-- No cursor-following spotlight, no matrix/binary rain, no parallax. Those were considered and
-  ruled out.
+This was tried and removed. The machine view's own text was rendered site-wide as texture — first
+tiled in columns, then as one full-height column flush left. Even at 1.4% opacity, where the
+glyph pixels differ from the ground by about 3/255, it read as noise competing with the content
+rather than as texture. The source-view toggle turned out to be the better home for that idea:
+the JSON is legible on demand instead of half-visible all the time.
+
+Do not reintroduce a background — not the JSON texture, not a dot grid, not grain, not a glow —
+without an explicit instruction. Prior attempts and the reasons they were rejected are recorded
+here so this does not get rediscovered.
 
 ## Working conventions
 

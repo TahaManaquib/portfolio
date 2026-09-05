@@ -7,6 +7,7 @@ import '../styles/global.css';
 // Only the sans is preloaded. The mono is used selectively (technical/system
 // elements, mostly below the fold) and shouldn't compete with first paint.
 import interWoff2 from '@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url';
+import SourceView from '../components/SourceView.astro';
 
 interface Props {
   title: string;
@@ -38,6 +39,13 @@ const canonical = new URL(path, Astro.site);
   </head>
 
   <body class="min-h-dvh">
+    {
+      /* Source-view switch. It is first in <body> so sibling selectors in
+        global.css can reach everything it controls. Zero JS — a real checkbox,
+        so it is keyboard-operable and announced correctly for free. */
+    }
+    <input type="checkbox" id="source-view" class="sr-only" />
+
     <a
       href="#main"
       class="focus:bg-surface focus:text-fg sr-only rounded-sm focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-2"
@@ -52,5 +60,13 @@ const canonical = new URL(path, Astro.site);
     </main>
 
     <slot name="footer" />
+
+    <SourceView />
+
+    <label for="source-view" class="source-toggle" title="Toggle source view">
+      <span class="glyph" aria-hidden="true">{'{ }'}</span>
+      <span class="when-off sr-only">View source data</span>
+      <span class="when-on sr-only">Back to the site</span>
+    </label>
   </body>
 </html>
