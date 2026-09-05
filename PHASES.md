@@ -133,8 +133,12 @@ phase.
 
 Build, in this order, one step at a time with approval between each:
 
-1. **API Simulation, stage 1 only** — fetch button, minimal load indicator, crash past a
-   threshold, purely client-side/simulated state (no real backend calls needed for this phase).
+1. **API Simulation, stage 1 only** — DONE. Lives between Stack and Contact as `#api`, with no
+   nav item (discovered, not advertised). Static markup ships; the island loads on first click.
+   The engine (`src/islands/api/engine.ts`) is a real concurrency model, not a counter: requests
+   occupy the server for a service time, that time degrades as concurrency rises, and the
+   feedback loop is what kills it. Crash expiry is derived from the clock, never from a flag a
+   render loop has to clear.
 2. **Hidden bug icon** — crashing reveals the bug icon per CLAUDE.md's spec (low-opacity, tucked
    near the button/input, appears only post-crash).
 3. **Attack toolkit** — clicking the bug icon reveals the attack panel.

@@ -216,6 +216,21 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
   Clicking fetches; a visible load number climbs. Spam it past a threshold and the simulated
   "server" crashes (a short, purposeful state change — not a looping animation).
 
+  **Say nothing up front.** The section is a heading, a button and some numbers. No copy naming
+  rate limiting, caching, queueing or circuit breaking — that is the whole game, and printing it
+  above the button hands it over before the visitor has pressed anything. They should wonder what
+  it is, press it, and find out. Explanations arrive only after a crash, and stay terse.
+
+  **The crash must be reachable by hand.** Tune it by measuring time-to-crash across sustained
+  click rates, not by feel: casual clicking (up to ~3/second) survives indefinitely, deliberate
+  mashing (4+/second) falls over in a second or two. An early build survived 15 clicks/second,
+  which meant only a script could ever trigger it — the centerpiece was unreachable.
+
+  **Presses made before the island loads still count.** The section is static HTML until the
+  first click, and the whole interaction is mashing, so the loader records every press while the
+  chunk downloads and replays them with their real spacing. Losing them makes the first burst
+  feel broken.
+
   **Stage progression (each stage breaks a different way — not just "click faster"):**
   1. **No protection.** Spam past the threshold → crash. This is the moment that reveals the
      hidden bug icon (see below). Fix offered: rate limiting.

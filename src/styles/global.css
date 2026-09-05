@@ -475,3 +475,183 @@
     outline: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   API simulation.
+
+   Global rather than scoped because the markup exists twice: once as static
+   HTML in ApiSim.astro (what ships) and once rendered by the Preact island
+   (what takes over on first click). Scoped styles would only reach the first.
+   Keeping them identical is what makes the swap invisible.
+   --------------------------------------------------------------------------- */
+@layer components {
+  .api {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    max-width: 34rem;
+  }
+
+  .api-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .api-fetch {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    gap: 0.6ch;
+    padding-inline: 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    background-color: var(--color-bg);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--color-fg);
+    cursor: pointer;
+    transition:
+      border-color 150ms ease,
+      color 150ms ease;
+  }
+
+  .api-fetch:hover:not(:disabled) {
+    border-color: var(--color-accent-dim);
+  }
+
+  .api-fetch:disabled {
+    cursor: not-allowed;
+    color: var(--color-fg-muted);
+  }
+
+  .api-verb {
+    color: var(--color-accent);
+  }
+
+  .api-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-fg-muted);
+  }
+
+  /* One accent, so health is signalled by the colour draining away rather than
+     by introducing a red the palette does not have. A dead grey dot on a site
+     that is green everywhere else reads as wrong, which is the point. */
+  .api-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--color-accent);
+    transition: background-color 200ms ease;
+  }
+
+  .api-dot.is-strained {
+    background-color: var(--color-accent-dim);
+  }
+
+  .api-dot.is-crashed,
+  .api-dot.is-recovering {
+    background-color: var(--color-fg-subtle);
+  }
+
+  .api-gauge-track {
+    height: 3px;
+    background-color: var(--color-border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .api-gauge-fill {
+    height: 100%;
+    background-color: var(--color-accent);
+    /* Short and purposeful; it tracks a value, it does not animate idly. */
+    transition:
+      width 120ms linear,
+      background-color 200ms ease;
+  }
+
+  .api-gauge-fill.is-strained {
+    background-color: var(--color-accent-dim);
+  }
+
+  .api-gauge-fill.is-crashed,
+  .api-gauge-fill.is-recovering {
+    background-color: var(--color-fg-subtle);
+  }
+
+  .api-gauge-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-fg-muted);
+  }
+
+  .api-totals {
+    display: flex;
+    gap: 2rem;
+    margin: 0;
+  }
+
+  .api-totals dt {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-fg-muted);
+  }
+
+  .api-totals dd {
+    margin: 0.15rem 0 0;
+    font-family: var(--font-mono);
+    font-size: 18px;
+    color: var(--color-fg);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .api-log {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-fg-muted);
+  }
+
+  .api-log li {
+    display: flex;
+    gap: 1.5ch;
+  }
+
+  .api-log li.is-failed .api-log-status {
+    color: var(--color-fg);
+  }
+
+  .api-log-status {
+    color: var(--color-accent-dim);
+  }
+
+  .api-log-id,
+  .api-log-latency {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .api-note {
+    max-width: 34rem;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--color-fg-muted);
+    border-left: 1px solid var(--color-border-strong);
+    padding-left: 0.85rem;
+  }
+}
