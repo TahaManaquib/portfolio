@@ -263,3 +263,215 @@
     display: inline;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Terminal panel.
+
+   Global rather than scoped: the panel is rendered by a Preact island into a
+   host element appended to <body>, so Astro's component scoping cannot reach
+   it. Keeping the CSS here also means the styles ship with the stylesheet
+   instead of being injected on open, which would flash.
+   --------------------------------------------------------------------------- */
+@layer components {
+  /* Closed = hidden, not unmounted, so scrollback and history survive a
+     close/reopen. `hidden` also removes the subtree from the tab order. */
+  .term-host[hidden] {
+    display: none;
+  }
+
+  .term {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    min-height: 120px;
+    max-height: 90dvh;
+    background-color: var(--color-bg);
+    border-top: 1px solid var(--color-border-strong);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.7;
+    /* Lifts the panel off the page instead of letting it sit flat against it.
+       Static, no animation — it is depth, not motion. */
+    box-shadow: 0 -24px 48px -24px rgb(0 0 0 / 85%);
+  }
+
+  /* The drag target is taller than the visible rule — a 1px grab area is a
+     miserable pointer target and fails WCAG 2.5.8. */
+  /* Straddles the top edge so the grab area is reachable from just above the
+     panel, as an editor sash is. The drag target is deliberately taller than
+     the 1px rule it draws — a 1px target is miserable to hit. */
+  .term-handle {
+    position: absolute;
+    top: -5px;
+    inset-inline: 0;
+    height: 11px;
+    cursor: ns-resize;
+    touch-action: none;
+    z-index: 1;
+  }
+
+  .term-handle::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    top: 5px;
+    height: 1px;
+    background-color: transparent;
+    transition: background-color 150ms ease;
+  }
+
+  .term-handle:hover::after,
+  .term-handle:focus-visible::after,
+  .term-handle[data-dragging]::after {
+    background-color: var(--color-accent-dim);
+  }
+
+  .term-handle:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: -2px;
+  }
+
+  .term-bar {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem 0.5rem 1rem;
+    border-bottom: 1px solid var(--color-border);
+    background-color: var(--color-surface);
+    color: var(--color-fg-muted);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+  }
+
+  /* Static session dot — a status light, not a pulse. */
+  .term-dot {
+    flex: 0 0 auto;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--color-accent);
+  }
+
+  .term-title {
+    color: var(--color-fg);
+  }
+
+  .term-hint {
+    margin-left: auto;
+    color: var(--color-fg-muted);
+    letter-spacing: 0.06em;
+  }
+
+  .term-close {
+    display: inline-flex;
+    min-width: 1.75rem;
+    min-height: 1.75rem;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 2px;
+    background: none;
+    color: var(--color-fg-muted);
+    cursor: pointer;
+    transition:
+      color 150ms ease,
+      background-color 150ms ease;
+  }
+
+  .term-close:hover {
+    color: var(--color-accent);
+    background-color: var(--color-bg);
+  }
+
+  .term-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    /* Stop scroll chaining. Without this, reaching the top or bottom of the
+       scrollback hands the wheel to the page underneath and the site scrolls
+       away behind the panel. `contain` blocks the hand-off while keeping normal
+       scrolling inside, and covers touch as well as wheel. */
+    overscroll-behavior: contain;
+    padding: 1rem 1rem 1.25rem;
+    /* The empty area below the last line focuses the input, like a real
+       terminal, so the whole panel behaves as one click target. */
+    cursor: text;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-strong) transparent;
+  }
+
+  .term-line {
+    display: flex;
+    gap: 0.6ch;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    /* Blank spacer lines carry no content, and a flex row with no content has
+       no height — so deliberate spacing in command output silently vanished.
+       Reserve one line box regardless. */
+    min-height: 1.7em;
+  }
+
+  /* Each echoed command starts a new block. Without this every command and its
+     output run together into one wall, which is what made it feel cramped. */
+  .term-in,
+  .term-form {
+    margin-top: 1.4em;
+  }
+
+  .term-body > .term-line:first-child {
+    margin-top: 0;
+  }
+
+  .term-out {
+    color: var(--color-fg);
+  }
+  .term-dim {
+    color: var(--color-fg-muted);
+  }
+  .term-err {
+    color: var(--color-fg-muted);
+    font-style: italic;
+  }
+  .term-in {
+    color: var(--color-fg);
+  }
+
+  /* Prompt: `~ $` — the tilde muted, the sigil in accent. Enough shape to read
+     as a shell without inventing a fake hostname. */
+  .term-prompt {
+    flex: 0 0 auto;
+    user-select: none;
+    white-space: pre;
+  }
+
+  .term-cwd {
+    color: var(--color-fg-muted);
+  }
+
+  .term-sigil {
+    color: var(--color-accent);
+  }
+
+  .term-form {
+    display: flex;
+    gap: 0.6ch;
+    align-items: baseline;
+  }
+
+  .term-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    border: 0;
+    background: none;
+    color: var(--color-fg);
+    font: inherit;
+    caret-color: var(--color-accent);
+  }
+
+  .term-input:focus {
+    outline: none;
+  }
+}

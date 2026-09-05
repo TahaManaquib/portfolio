@@ -32,4 +32,26 @@ const year = new Date().getFullYear();
 
     <p class="text-fg-muted font-mono text-xs">&copy; {year} {site.name}</p>
   </div>
+
+  {
+    /* Touch only. An invitation, not an apology — the point is that there is
+      more here at a desk, not that this device is the wrong one. Deliberately a
+      quiet permanent line rather than a timed overlay: nothing on the recruiter
+      path should interrupt someone before they have read anything. */
+  }
+  <p class="touch-note gutter text-fg-muted pb-8 font-mono text-xs">
+    desktop has a terminal and a few things worth finding ;)
+  </p>
 </footer>
+
+<style>
+  .touch-note {
+    display: none;
+  }
+
+  @media (hover: none) {
+    .touch-note {
+      display: block;
+    }
+  }
+</style>

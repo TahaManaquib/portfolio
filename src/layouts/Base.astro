@@ -8,6 +8,7 @@ import '../styles/global.css';
 // elements, mostly below the fold) and shouldn't compete with first paint.
 import interWoff2 from '@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url';
 import SourceView from '../components/SourceView.astro';
+import TerminalLoader from '../components/TerminalLoader.astro';
 import { site } from '../data/site';
 
 interface Props {
@@ -91,6 +92,8 @@ const OG_IMAGE_ALT = `${site.name} — ${site.role}. ${site.pitch.lead}.`;
     <slot name="footer" />
 
     <SourceView />
+
+    <TerminalLoader />
 
     <label for="source-view" class="source-toggle" title="Toggle source view">
       <span class="glyph" aria-hidden="true">{'{ }'}</span>
