@@ -118,7 +118,8 @@ overrides "cool idea" every time the two conflict. Concretely:
   paint or first interaction on it, and never gate content behind it.
 - No animation libraries for simple UI transitions — CSS transitions/transforms only.
   Animations are 100–300ms, short and purposeful. Nothing animates by default/idly.
-- No theme toggle. Pick one theme (dark, in the spirit of both reference sites) and ship it.
+- No light/dark theme toggle. Dark, always — see "Background" and the palette-editor note under
+  Visual direction for the one deliberate exception.
 - Mobile-first and accessible from the start of each phase — not deferred to a "polish" phase.
 
 When in doubt: default to static, defer to on-demand, and cut anything whose engineering cost
@@ -142,7 +143,8 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
 - **Terminal** — entry via ⌘K or a small icon. Commands: `about`, `stack`, `contact`, `clear`,
   plus at least one hidden command (`sudo hire taha` → playful "permission denied").
 
-- **The API Simulation** — the site's single centerpiece interactive system. It replaces what
+- **The API Simulation** — the first of the site's two headline interactions, and the one that
+  demonstrates engineering depth. It replaces what
   would otherwise be three separate features (an API playground, a system-status panel, and a
   standalone mini-game) with one unified, narrative mechanic. Entirely client-side/simulated —
   no real backend calls, no real crash, no real risk — which keeps it fast and simple to build.
@@ -184,11 +186,21 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
   view. It makes "the portfolio _is_ the project" something a visitor can flip a switch and see,
   rather than a claim in a paragraph.
 
-  **This is a distinct feature, NOT a second centerpiece.** The API Simulation remains the
-  single centerpiece interactive system — it is the one that demonstrates engineering depth
-  (rate limiting, caching, queueing, circuit breaking). The source view demonstrates concept and
-  taste. Do not let it grow into a rival system: no multiple formats to choose from, no
-  syntax-highlighting _themes_ (one restrained token scheme is fine), no export.
+  **The site has two headline interactions, decided deliberately.** This replaces the earlier
+  "single centerpiece" rule, which the source view had already outgrown by accumulation:
+
+  1. **The API Simulation** — demonstrates engineering depth: rate limiting, caching, queueing,
+     circuit breaking. This is the evidence that Taha can build backends.
+  2. **The source view** — demonstrates the "the portfolio _is_ the project" idea, and invites a
+     visiting developer to make the site their own.
+
+  They are different kinds of thing, which is why two works here. Neither may absorb the other,
+  and the API Simulation is still the one a recruiter should be able to understand without
+  reading code.
+
+  Even with two, the source view has a boundary. Still out: multiple formats to choose from,
+  syntax-highlighting _themes_ (one restrained token scheme is fine), export, and raw-text JSON
+  editing. Anything beyond the list below needs an explicit decision.
 
   What the source view is allowed to contain:
   - Collapsible nodes (`<details>`/`<summary>`) with key/element counts, like a real JSON viewer.
@@ -203,6 +215,26 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
     Rules for it when built: edits render as **text, never HTML** (a visitor typing a tag must
     see the characters); edits are **ephemeral** — a reload restores the real content, nothing
     is persisted to localStorage; and a reset control is provided.
+  - **Palette editing (Phase 3.5a).** Preset themes plus a custom colour picker, so a visiting
+    developer can recolour the site and see it become theirs. This is the reason the source view
+    counts as a headline interaction rather than a flourish.
+    - **Three seeds only:** background, foreground, accent. Every other token is _derived_ from
+      them with `color-mix()` — surface, borders, muted/subtle text, accent-dim/faint. Exposing
+      all ten tokens would guarantee incoherent results; deriving them means any three colours
+      produce a coherent system. This derivation is worth doing to the token definitions
+      regardless of the feature, because those relationships currently live in comments rather
+      than in code.
+    - **A live contrast readout is mandatory, not optional.** Each seed shows its ratio against
+      its pairing and whether it passes AA/AAA, updating as the visitor picks. Without it a
+      visitor can make the site unreadable in two clicks, on a site whose spec has a hard AA
+      floor. With it, the weakest part of the feature becomes a visible demonstration that
+      accessibility was thought about.
+    - Presets need **zero JS** (`html:has(#theme-x:checked)` reaches `:root`). Only the custom
+      picker needs an island, since CSS cannot read an `<input type="color">` value.
+    - Controls live in the source view's header strip, **not in the JSON body** — the body is
+      content; colours are viewer settings. Putting `theme.accent` in the payload would quietly
+      turn `GET /taha` from a profile response into a config document.
+    - **Ephemeral**, like every other edit: reload restores the real palette. Covered by reset.
   - **Visitor comments (`//`), also Phase 3.5.** An annotation layer, never part of the payload:
     JSON has no comment syntax, so putting them in the body would invalidate a response still
     labelled `application/json`. Rendered JSONC-style beside the data and surfaced on the human
@@ -301,8 +333,10 @@ anything the repo does not actually contain.
 
 - No Selected Work / projects section, no project cards, no case study pages, no portfolio
   gallery — do not add these back unless explicitly instructed.
+- No **light/dark theme toggle** — dark only, always. (Distinct from the source view's palette
+  editor, which is ephemeral, hidden in the discovery layer, and never changes the default.)
 - No dedicated About page/section, no dedicated Resume page/section, no achievement categories,
-  no idle icon animation, no sound effects, no theme toggle, no World State system, no separate
+  no idle icon animation, no sound effects, no World State system, no separate
   puzzle systems beyond the one mini-game, no guestbook (undecided — do not implement until
   explicitly instructed), no heavy animation library, no long loading sequences, no 3D/parallax/
   cyberpunk/pixel-art/RPG-XP-bar styling.
@@ -319,7 +353,10 @@ anything the repo does not actually contain.
   elements — not the whole site.
 - Mostly neutral palette: one background/neutral, one text system, one subtle accent.
 - Lots of whitespace, thin subtle borders, strong hierarchy, minimal visual noise.
-- Single fixed theme (dark), no toggle.
+- Single fixed theme (**dark**), and **no light/dark toggle** — dark is the base, it is what
+  ships, and it is what every first visit sees. The palette editor in the source view (Phase
+  3.5a) is a different thing: a discovery-layer toy that recolours the tokens ephemerally for
+  one visitor. It never changes the default, and it is never a light-mode switch.
 - Encode the above as Tailwind theme tokens (colors, font families, spacing/type scale) so the
   palette and rhythm are enforced by the config rather than by discipline.
 

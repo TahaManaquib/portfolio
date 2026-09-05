@@ -1,0 +1,4 @@
+# The whole site is public and crawlable. There is nothing private here —
+# the résumé PDF is linked from the nav on purpose.
+User-agent: *
+Allow: /

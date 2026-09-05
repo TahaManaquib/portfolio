@@ -101,12 +101,13 @@ reveals it. Its editable-values tier is Phase 3.5 below.
 > command is gone — commands are `about`, `stack`, `contact`, `clear`, plus the hidden one. For
 > the Source view, confirm it is zero-JS (hidden checkbox + `:checked ~`), that it renders from
 > the Phase 1 content module rather than duplicating content, and that it stays small — the API
-> Simulation is still the single centerpiece. Build in reviewable steps and stop for my approval
+> Simulation is still the headline interaction that carries the engineering depth. Build in
+> reviewable steps and stop for my approval
 > between them.
 
 ---
 
-## Phase 3 — The API Simulation (centerpiece) + easter eggs
+## Phase 3 — The API Simulation + easter eggs
 
 **Goal:** the discovery layer, built around the API Simulation as the spine.
 
@@ -146,7 +147,41 @@ later without rework — but no achievement UI now.
 
 ---
 
-## Phase 3.5 — Editable source view (Tier 1) + comments
+## Phase 3.5 — Making the source view interactive
+
+Three independent features, deliberately split so any of them can be built, reordered, or cut
+without touching the others. Suggested order is cheapest-and-most-striking first.
+
+|          |                                                            | Needs JS?              |
+| -------- | ---------------------------------------------------------- | ---------------------- |
+| **3.5a** | Palette editing — presets, custom picker, contrast readout | presets no, picker yes |
+| **3.5b** | Tier 1 editable values                                     | yes                    |
+| **3.5c** | Visitor comments (`//`)                                    | yes                    |
+
+All three share: **text never HTML**, **ephemeral** (reload restores the real thing), one
+**reset** control, and an island that loads **only when the source view is opened**.
+
+---
+
+### 3.5a — Palette editing
+
+**Goal:** a visiting developer recolours the site and it becomes theirs. This is what makes the
+source view a headline interaction rather than a flourish.
+
+- **Three seeds only** — background, foreground, accent. Everything else derives from them via
+  `color-mix()`. Do this derivation to the tokens in `global.css` first; it is an improvement to
+  the design system on its own, and it is what stops any picked colour producing a broken theme.
+- **Contrast readout is mandatory.** Live ratio + AA/AAA verdict per seed as the visitor picks.
+  Non-negotiable: without it this feature can make the site unreadable, on a site with a hard AA
+  floor in its spec. With it, it demonstrates the opposite.
+- **Presets are zero JS** — `html:has(#theme-x:checked)` reaches `:root`, so a radio group is
+  enough. Only the custom picker needs the island.
+- Controls live in the source view header strip, never in the JSON body (see CLAUDE.md).
+- Never touches the default palette. Dark stays the base for every first visit.
+
+---
+
+### 3.5b — Editable values (Tier 1)
 
 **Goal:** the source view stops being read-only. A visitor can edit **values** in the JSON and
 watch the human view change when they toggle back.
@@ -166,7 +201,7 @@ Simulation — the actual centerpiece — must exist first.
 - Array add/remove is **Tier 2** — a possible follow-on, not part of this phase. Decide only
   after Tier 1 has been used.
 
-### Comments (`//`) — part of this phase
+### 3.5c — Visitor comments (`//`)
 
 Visitors can annotate the data with `//` comments, JSONC-style, and those annotations surface on
 the human view too.
