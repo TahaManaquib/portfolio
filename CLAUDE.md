@@ -75,9 +75,9 @@ build served from a CDN.
   sync, no remote store, no anonymous-ID service.
 - "System status" indicators are cosmetic. There is no real health check to run, because there
   is nothing to check.
-- The "hidden API endpoint" easter egg is a **prerendered static route** that returns
-  JSON-shaped content (e.g. `/api/whoami.json`). It looks like an endpoint; it is a build
-  artifact.
+- If a "hidden API endpoint" easter egg is ever built, it is a **prerendered static route**
+  returning JSON-shaped content — it looks like an endpoint; it is a build artifact. One was
+  built at `/api/whoami.json` and **removed at Taha's request**; do not rebuild it.
 
 This may change later, but only on an explicit instruction. Until then, treat any proposal that
 needs a server as out of scope and say so instead of building it.
@@ -185,17 +185,10 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
   - **The filter for new commands:** the terminal only earns a command that does something you
     cannot do by pointing. Without that rule it accumulates commands the way the source view
     accumulated features. It is a _control surface_, not a second way to read the page.
-    - **`perf`** — real transfer sizes and timings from the visitor's own page load, via the
-      Navigation and Resource Timing APIs. Nothing hard-coded: the site's speed claim becomes
-      verifiable in the reader's browser instead of asserted in a README. Three things it must
-      keep doing: count only same-origin resources (extensions and the dev toolbar inject into
-      the same timeline), say so loudly when running against the dev server (those numbers are
-      nothing like the built site's), and omit first paint when it postdates load — Chrome defers
-      paint in background tabs, and printing `first paint 3232ms` next to `load 69ms` reads as
-      broken rather than slow.
-    - **`curl /taha`** — prints the machine view as an HTTP response. Small, but it makes the
-      terminal, the source view and the `/api/whoami.json` easter egg one idea seen three ways.
-      Unknown paths return a real-looking 404.
+    - **Built and then removed at Taha's request: `perf` and `curl`.** They satisfied the
+      filter above and worked, but he did not want them. Do not rebuild either without an
+      explicit instruction. `perf` read real Navigation/Resource Timing numbers; `curl /taha`
+      printed the machine view as an HTTP response.
     - **`get` / `set` / `theme` / `reset` — Phase 3.5.** The payoff. Once the JSON viewer is
       editable, these drive the _same state_, so editing a value in the viewer shows up in `get`,
       and `theme #ff6b6b` recolours the site and the viewer together. That is what stops the
@@ -216,6 +209,36 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
   Clicking fetches; a visible load number climbs. Spam it past a threshold and the simulated
   "server" crashes (a short, purposeful state change — not a looping animation).
 
+  **Say nothing up front.** The section is a heading, a button and some numbers. No copy naming
+  rate limiting, caching, queueing or circuit breaking — that is the whole game, and printing it
+  above the button hands it over before the visitor has pressed anything. They should wonder what
+  it is, press it, and find out. Explanations arrive only after a crash, and stay terse.
+
+  **Plain words carry the meaning; jargon rides along as a tag.** A recruiter must be able to
+  follow what just happened without a backend background, and the earlier build failed that —
+  "unbounded concurrency", "cap requests per window", "0 / 4 in flight" and a bare `503` explain
+  nothing to someone who does not already know. The rule is not to remove the technical terms,
+  which are half the point of the section, but to stop them being the only label:
+  - Every explanation — postmortems, fix blurbs, defect descriptions, exploit instructions — is
+    written in language that needs no background. Say what happens, not what it is called.
+  - The real name still appears, dimmed and secondary: a small tag beside the plain title, a
+    status code after the plain word. An engineer sees `down · 503` and `cache miss`; everyone
+    else reads the sentence and skips them.
+  - A blurb that only restates the name in more jargon is not a blurb. "Cap requests per window"
+    tells you nothing you did not get from "rate limit".
+  - Names in the middleware chain stay technical and unqualified — `rate limit → cache → queue →
+breaker` is the thing the visitor built, and it should read like a real stack.
+
+  **The crash must be reachable by hand.** Tune it by measuring time-to-crash across sustained
+  click rates, not by feel: casual clicking (up to ~3/second) survives indefinitely, deliberate
+  mashing (4+/second) falls over in a second or two. An early build survived 15 clicks/second,
+  which meant only a script could ever trigger it — the centerpiece was unreachable.
+
+  **Presses made before the island loads still count.** The section is static HTML until the
+  first click, and the whole interaction is mashing, so the loader records every press while the
+  chunk downloads and replays them with their real spacing. Losing them makes the first burst
+  feel broken.
+
   **Stage progression (each stage breaks a different way — not just "click faster"):**
   1. **No protection.** Spam past the threshold → crash. This is the moment that reveals the
      hidden bug icon (see below). Fix offered: rate limiting.
@@ -229,6 +252,28 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
      cached/fallback responses or a polite 429 instead of dying. This is the capstone state —
      framed as "you built a production-grade API," not "it's now unbreakable."
 
+  **How fixes reach the visitor.** Attacks have a home (the bug icon); fixes need one too, or the
+  loop only works in one direction. Fixes appear **inline at the point of failure** — after a
+  crash, one button next to the postmortem line, with a one-line rationale (`+ rate limit — cap
+requests per window`). No second panel, no discovery required: it shows up exactly when it has
+  been earned, and the rationale teaches the concept without lecturing.
+
+  Applied fixes then render as a **middleware chain** above the endpoint —
+  `rate limit → cache → queue → breaker` — which starts empty and grows. That chain is the
+  progress indicator, and it is what makes the capstone land: the visitor can see the thing they
+  built. The two sides stay separate on purpose: the bug icon answers "how do I break it now",
+  the chain answers "what did I just learn".
+
+  **Every defence must actually defeat the attack it answers.** Sounds obvious; it is easy to get
+  wrong. The first build set the rate limit to 5 per window against a server capacity of 4, so a
+  client obeying the limit perfectly could still kill it — applying the fix changed nothing. A
+  limit must sit below capacity, and each new defence needs a test proving the _previous_ stage'''s
+  attack now fails against it.
+
+  **State rules:** progress persists to localStorage (a five-stage journey must survive a
+  reload). The visitor applies each fix themselves — nothing is automatic. A **reset wipes
+  everything** back to stage 1, and appears only once there is something to reset.
+
   **The hidden bug mechanic:** after the first crash (stage 1), a small bug icon appears —
   tucked at the edge of the fetch button or an adjacent input, low-opacity, easy to miss on a
   glance, similar treatment to the achievements icon (see below), but only appears post-crash.
@@ -239,8 +284,35 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
   disappearing — this turns the panel into a lightweight changelog of the API's hardening and
   gives the whole thing a sense of progress even before you reach the end state.
 
+  **The icon is load-bearing, not a bonus.** Once the rate limiter is in, mashing the button
+  cannot get through at any speed — the only way forward is the timed attack the panel arms you
+  with. So a visitor who never spots the icon hits a dead end. It stays faint for anyone who
+  finds it on their own, but it gets **easier to see for someone visibly attacking and getting
+  nowhere**: two opacity steps, at 10 and 24 requests turned away since the last fix, cleared by
+  a successful breach. A one-time step change with a short transition — never a loop, never an
+  idle pulse. Do not "fix" the dead end by making the icon permanently obvious; that spends the
+  discovery for everyone to rescue a few.
+
+  The panel only ever lists stages the visitor has reached — the open defect plus the ones
+  already patched. Listing a weakness in a defence they have not built yet would hand over the
+  rest of the game.
+
   This system fully absorbs the old API Playground, System Status panel, and "Fix the Server"
   mini-game concepts. Do not build those as separate features alongside this.
+
+  **It was built to this spec in full, and the result is too big — a cut-back is pending.** All
+  five stages exist and every defence provably defeats the attack it answers, but the whole is
+  harder to follow than any part of it, and Taha could not follow it himself. Treat the stage
+  list above as _what was built_, not as settled scope: the visitor-facing path is expected to
+  shrink, most likely to three stages ending at the cache, with the remaining engine kept in the
+  repo for the engineer who opens the source. See the checkpoint at the end of Phase 3 in
+  `PHASES.md` for the full diagnosis. **Do not extend this section further** — no new stages, no
+  new attacks, no new counters — until that cut has been made.
+
+  One rule already learned from it, which applies beyond this section: **"say nothing up front"
+  protects the first discovery, not every moment after it.** Once a visitor has crashed the
+  endpoint they have opted in, and continuing to withhold the shape of the thing stops being
+  mystery and becomes obscurity.
 
 - **Source view** — the site's second representation. Every piece of core content also exists as
   a machine-readable **HTTP/JSON API response** (`GET /taha` → `200 OK` → a JSON body), and a
@@ -319,8 +391,6 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
     deliberate rather than a spoiler: the terminal is otherwise undiscoverable (⌘K is advertised
     nowhere), and a secret command leaking through an API response is a better joke than a
     secret command nobody finds. It stays honest because those commands genuinely exist.
-  - It shares its shape with the `/api/whoami.json` easter egg, so the two reinforce each other
-    instead of being two unrelated jokes.
 
 ### Achievements — DEFERRED, do not design the list yet
 
@@ -351,9 +421,16 @@ The _rules_ below are locked and still apply whenever achievements do get built:
 
 ### Easter eggs
 
-- Logo click sequence, hidden terminal command, a hidden "API endpoint" (a prerendered static
-  route returning JSON-shaped content — no server involved), and a backend-humor 404 page.
-  Discoverable through curiosity, never impossible to find.
+Two, both built: the **hidden terminal command** (`sudo hire taha`) and a **backend-humour 404
+page**. Discoverable through curiosity, never impossible to find.
+
+**Cut, and not to be rebuilt without an explicit instruction:** the logo click sequence (never
+built — the terminal and the source view already have entry points, and it could not unlock
+anything while achievements are deferred) and the `/api/whoami.json` route (built, then removed).
+
+The 404 is honest about itself: it is served as `text/html`, so its framing block says so rather
+than borrowing the source view's `application/json`. It does not report the path the visitor
+tried, because reading that needs a script and the page otherwise needs none.
 
 ### Visitor state / persistence
 

@@ -475,3 +475,528 @@
     outline: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   API simulation.
+
+   Global rather than scoped because the markup exists twice: once as static
+   HTML in ApiSim.astro (what ships) and once rendered by the Preact island
+   (what takes over on first click). Scoped styles would only reach the first.
+   Keeping them identical is what makes the swap invisible.
+   --------------------------------------------------------------------------- */
+@layer components {
+  .api {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    max-width: 34rem;
+  }
+
+  .api-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .api-fetch {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    gap: 0.6ch;
+    padding-inline: 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    background-color: var(--color-bg);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--color-fg);
+    cursor: pointer;
+    transition:
+      border-color 150ms ease,
+      color 150ms ease;
+  }
+
+  .api-fetch:hover:not(:disabled) {
+    border-color: var(--color-accent-dim);
+  }
+
+  .api-fetch:disabled {
+    cursor: not-allowed;
+    color: var(--color-fg-muted);
+  }
+
+  .api-verb {
+    color: var(--color-accent);
+  }
+
+  .api-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-fg-muted);
+  }
+
+  /* One accent, so health is signalled by the colour draining away rather than
+     by introducing a red the palette does not have. A dead grey dot on a site
+     that is green everywhere else reads as wrong, which is the point. */
+  .api-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--color-accent);
+    transition: background-color 200ms ease;
+  }
+
+  .api-dot.is-strained {
+    background-color: var(--color-accent-dim);
+  }
+
+  .api-dot.is-crashed,
+  .api-dot.is-recovering {
+    background-color: var(--color-fg-subtle);
+  }
+
+  .api-gauge-track {
+    height: 3px;
+    background-color: var(--color-border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .api-gauge-fill {
+    height: 100%;
+    background-color: var(--color-accent);
+    /* Short and purposeful; it tracks a value, it does not animate idly. */
+    transition:
+      width 120ms linear,
+      background-color 200ms ease;
+  }
+
+  .api-gauge-fill.is-strained {
+    background-color: var(--color-accent-dim);
+  }
+
+  .api-gauge-fill.is-crashed,
+  .api-gauge-fill.is-recovering {
+    background-color: var(--color-fg-subtle);
+  }
+
+  .api-gauge-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-fg-muted);
+  }
+
+  .api-totals {
+    display: flex;
+    gap: 2rem;
+    margin: 0;
+  }
+
+  .api-totals dt {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-fg-muted);
+  }
+
+  .api-totals dd {
+    margin: 0.15rem 0 0;
+    font-family: var(--font-mono);
+    font-size: 18px;
+    color: var(--color-fg);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .api-log {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-fg-muted);
+  }
+
+  .api-log li {
+    display: flex;
+    gap: 1.5ch;
+  }
+
+  .api-log li.is-failed .api-log-status {
+    color: var(--color-fg);
+  }
+
+  .api-log-status {
+    color: var(--color-accent-dim);
+  }
+
+  .api-log-id,
+  .api-log-latency {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Marks a row answered from memory. The status is still 200, so the tag is
+     what distinguishes "we did the work" from "we already had it". */
+  .api-log-tag {
+    color: var(--color-accent-dim);
+  }
+
+  /* Time spent in the line is a cost, not a win — so it does not get the accent
+     that marks a response the cache saved. */
+  .api-log-tag.is-wait {
+    color: var(--color-fg-muted);
+  }
+
+  .api-note {
+    max-width: 34rem;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--color-fg-muted);
+    border-left: 1px solid var(--color-border-strong);
+    padding-left: 0.85rem;
+  }
+}
+
+/* --- API simulation: the defence chain and the inline fix offer ------------ */
+@layer components {
+  .api-chain {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .api-chain ol {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-accent);
+  }
+
+  /* Arrows between links, never before the first — the chain reads as a
+     pipeline the visitor assembled. */
+  .api-chain li + li::before {
+    content: '→';
+    margin-right: 0.5rem;
+    color: var(--color-fg-muted);
+  }
+
+  .api-reset {
+    margin-left: auto;
+    border: 0;
+    background: none;
+    padding: 0;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-fg-muted);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--color-border);
+    transition: color 150ms ease;
+  }
+
+  .api-reset:hover {
+    color: var(--color-fg);
+  }
+
+  .api-fixbox {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-width: 34rem;
+  }
+
+  .api-offer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0;
+  }
+
+  .api-apply {
+    display: inline-flex;
+    min-height: 2.25rem;
+    align-items: center;
+    padding-inline: 0.85rem;
+    border: 1px solid var(--color-accent-dim);
+    border-radius: 3px;
+    background-color: var(--color-bg);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-accent);
+    cursor: pointer;
+    transition:
+      background-color 150ms ease,
+      color 150ms ease;
+  }
+
+  .api-apply:hover {
+    background-color: var(--color-accent-faint);
+  }
+
+  .api-apply-blurb {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-fg-muted);
+  }
+}
+
+/* --- API simulation: the hidden bug icon and defect report ----------------- */
+@layer components {
+  /* Groups the icon with the button it hangs off, tighter than the row's own
+     gap, so it reads as tucked against the button rather than as a second
+     control sitting beside it. */
+  .api-launch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  /* Faint on purpose: found by looking, not by glancing. It is still a real
+     button — 28px square (above the 24px target floor), in the tab order, and
+     brought to full strength the moment it is hovered or focused, so nobody
+     navigating by keyboard has to hunt for something they cannot see. */
+  .api-bug {
+    display: inline-flex;
+    width: 1.75rem;
+    height: 1.75rem;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    background: none;
+    padding: 0;
+    color: var(--color-fg-muted);
+    opacity: 0.3;
+    cursor: pointer;
+    transition:
+      opacity 200ms ease,
+      color 200ms ease;
+  }
+
+  /* The earned nudge. Once a rate limiter is in place this icon is the only way
+     forward, so a visitor who is clearly attacking and getting nowhere gets it
+     made easier to see. A one-time step change, never a loop — nothing on this
+     site pulses for attention. */
+  .api-bug.is-nudged-1 {
+    opacity: 0.55;
+  }
+
+  .api-bug.is-nudged-2 {
+    opacity: 0.85;
+  }
+
+  /* Settled: found already, so it no longer needs to hide or to shout. */
+  .api-bug.is-found {
+    opacity: 0.7;
+  }
+
+  .api-bug:hover,
+  .api-bug:focus-visible,
+  .api-bug[aria-expanded='true'] {
+    opacity: 1;
+    color: var(--color-accent);
+  }
+
+  .api-bugs {
+    max-width: 34rem;
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    padding: 0.85rem 1rem;
+  }
+
+  .api-bugs-title {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-fg-muted);
+  }
+
+  .api-bugs ol {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    margin: 0.75rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* A grid rather than a wrapping flex row: the plain-language titles are long
+     enough to wrap, and with flex that dragged `open` / `patched` down onto a
+     second line at an arbitrary position. Explicit placement keeps the state
+     flush right on the first line whatever the title does, and drops the
+     technical tag onto its own row underneath. */
+  .api-defect-head {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    column-gap: 0.6rem;
+    row-gap: 0.3rem;
+    align-items: baseline;
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-fg);
+  }
+
+  .api-defect-id {
+    grid-area: 1 / 1;
+    color: var(--color-fg-muted);
+  }
+
+  .api-defect-title {
+    grid-area: 1 / 2;
+  }
+
+  .api-defect-state {
+    grid-area: 1 / 3;
+    color: var(--color-accent);
+  }
+
+  .api-defect-term {
+    grid-area: 2 / 2;
+    justify-self: start;
+  }
+
+  /* Narrow screens cannot afford three columns — the title column collapses to
+     a few characters wide. Stack instead. */
+  @media (width <= 30rem) {
+    .api-defect-head {
+      grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .api-defect-state {
+      grid-area: 2 / 2;
+    }
+
+    .api-defect-term {
+      grid-area: 3 / 2;
+    }
+  }
+
+  .api-defect-hint {
+    margin: 0.35rem 0 0;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.55;
+    color: var(--color-fg-muted);
+  }
+
+  /* Patched entries stay put, struck through — the panel is a changelog of what
+     the visitor has hardened, not a list that quietly shrinks. The exploit line
+     goes, because it no longer works. */
+  .api-defect.is-patched .api-defect-title {
+    color: var(--color-fg-muted);
+    text-decoration: line-through;
+    text-decoration-color: var(--color-border);
+  }
+
+  .api-defect.is-patched .api-defect-state {
+    color: var(--color-fg-muted);
+  }
+
+  .api-defect.is-patched .api-defect-hint {
+    display: none;
+  }
+}
+
+/* --- API simulation: the attack toolkit ------------------------------------ */
+@layer components {
+  .api-defect-run {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0.6rem 0 0;
+  }
+
+  /* Deliberately reads as the opposite of `.api-apply`: the fix button is the
+     accent colour because building something is the good outcome, so the attack
+     button is the plain one. Both are the same size and shape — the two halves
+     of the loop, not a primary and a secondary action. */
+  .api-run {
+    display: inline-flex;
+    min-height: 2rem;
+    align-items: center;
+    padding-inline: 0.75rem;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 3px;
+    background-color: var(--color-bg);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-fg);
+    cursor: pointer;
+    transition:
+      border-color 150ms ease,
+      color 150ms ease;
+  }
+
+  .api-run:hover:not(:disabled) {
+    border-color: var(--color-accent-dim);
+    color: var(--color-accent);
+  }
+
+  .api-run:disabled {
+    cursor: not-allowed;
+    color: var(--color-fg-muted);
+    border-color: var(--color-border);
+  }
+
+  .api-run-status {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-fg-muted);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* --- API simulation: plain language first, jargon as a tag ----------------- */
+@layer components {
+  /* Status codes and technical names sit beside the plain wording rather than
+     replacing it. Dim and small: an engineer reads them, everyone else reads
+     past them. `--color-fg-subtle` is not eligible here — these are real text,
+     so they stay on `--color-fg-muted` (6.0:1) per the token note above. */
+  .api-code,
+  .api-defect-term {
+    font-family: var(--font-mono);
+    color: var(--color-fg-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .api-code {
+    margin-left: 0.5ch;
+    font-size: 0.85em;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .api-defect-term {
+    font-size: 10px;
+    padding: 0.1rem 0.4rem;
+    border: 1px solid var(--color-border);
+    border-radius: 2px;
+  }
+
+  .api-defect.is-patched .api-defect-term {
+    opacity: 0.6;
+  }
+}

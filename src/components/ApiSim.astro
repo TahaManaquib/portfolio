@@ -1,0 +1,83 @@
+---
+import { DEFAULTS } from '../islands/api/engine';
+
+// The API Simulation section — the site's centerpiece interaction.
+//
+// Deliberately has no nav item: discovered, not advertised (CLAUDE.md).
+//
+// What ships on the recruiter path is the static markup below plus a one-line
+// loader. The simulation itself is a separate chunk fetched on the visitor's
+// first click, so a recruiter who never touches it pays nothing for it.
+//
+// The static markup mirrors the island's idle state exactly, so hydrating on
+// click swaps like-for-like with no flash.
+---
+
+<section id="api" tabindex="-1" class="border-border py-section-sm sm:py-section border-b">
+  {
+    /* No explanation on purpose. The section is meant to raise a question, not
+      answer one — a visitor should wonder what it is, press it, and find out.
+      Naming the defences up front would hand over the whole game. */
+  }
+  <h2 class="text-fg-muted font-mono text-xs tracking-wider uppercase">Endpoint</h2>
+
+  <div class="api-host mt-8" data-api-host>
+    <div class="api">
+      <div class="api-row">
+        <button type="button" class="api-fetch" data-api-fetch>
+          <span class="api-verb">GET</span>
+          <span class="api-path">/taha</span>
+        </button>
+        <p class="api-status">
+          <span class="api-dot is-healthy" aria-hidden="true"></span>
+          healthy
+        </p>
+      </div>
+
+      <div class="api-gauge">
+        <div class="api-gauge-track">
+          <div class="api-gauge-fill is-healthy" style="width:0%"></div>
+        </div>
+        <p class="api-gauge-meta">
+          <span>handling 0 of {DEFAULTS.capacity}</span>
+          <span>{DEFAULTS.baseLatencyMs} ms</span>
+        </p>
+      </div>
+
+      <dl class="api-totals">
+        <div><dt>sent</dt><dd>0</dd></div>
+        <div><dt>answered <span class="api-code">200</span></dt><dd>0</dd></div>
+        <div><dt>failed <span class="api-code">503</span></dt><dd>0</dd></div>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<script>
+  const host = document.querySelector<HTMLElement>('[data-api-host]');
+  const button = host?.querySelector('[data-api-fetch]');
+
+  if (host && button) {
+    // Every press that lands while the chunk is downloading is recorded, not
+    // just the first. The whole point of this section is that people mash the
+    // button, and a listener registered with `once` silently ate the presses
+    // between "chunk requested" and "island mounted" — so the counter read 5
+    // after six clicks.
+    //
+    // Timestamps rather than a count, so the simulation replays them with their
+    // real spacing instead of collapsing them into one instant.
+    const pressedAt: number[] = [];
+    let loading: Promise<void> | null = null;
+
+    const boot = (event: Event) => {
+      event.preventDefault();
+      pressedAt.push(performance.now());
+      loading ??= import('../islands/api/mount').then((m) => {
+        button.removeEventListener('click', boot);
+        m.mountApiSim(host, pressedAt);
+      });
+    };
+
+    button.addEventListener('click', boot);
+  }
+</script>
