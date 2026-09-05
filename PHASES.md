@@ -96,6 +96,9 @@ Build, one at a time with approval between each:
 4. **JSON signpost** — add the `interfaces` block to the content module so the source view
    advertises the terminal, its shortcut and its commands. Do this last: it must not advertise
    something that does not yet work.
+5. **`perf` and `curl`** — the commands that make the terminal a control surface rather than
+   another way to read the page. See CLAUDE.md for the constraints on `perf`; the short version
+   is that it must never print numbers it cannot stand behind.
 
 **This is where "zero JS" ends.** ⌘K needs a listener, so the recruiter path goes from literally
 0 bytes to a small always-present loader plus an on-demand chunk. Measure both and say so
@@ -172,6 +175,14 @@ without touching the others. Suggested order is cheapest-and-most-striking first
 
 All three share: **text never HTML**, **ephemeral** (reload restores the real thing), one
 **reset** control, and an island that loads **only when the source view is opened**.
+
+---
+
+### Terminal commands that ride on these
+
+`get` / `set` / `theme` / `reset` land with 3.5a and 3.5b — the terminal and the JSON viewer
+driving one shared state is the whole point, and it is what stops the terminal being a read-only
+view. Build them alongside the feature they expose, not as a separate pass.
 
 ---
 
@@ -272,6 +283,7 @@ Build (one at a time, approval between each):
 1. Anonymous visitor ID, generated client-side, kept in localStorage
 2. Interaction/unlock-flag persistence in localStorage, read after first paint
 3. Returning-visitor message + one small rotating discovery
+   - Add the terminal's **`whoami`** here: visitor id, first vs returning, what has been found.
 4. Public repo link ("view source"), if not already placed in Phase 1
 
 Achievements are still deferred (Phase 5) — this phase persists the underlying flags, not a

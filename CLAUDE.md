@@ -182,8 +182,28 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
   - The clear command is **`cls`**, not `clear`. Its name lives in
     `site.interfaces.terminal.commands`, which is also what the source view advertises — the
     terminal derives its command list from there, so the two cannot drift.
-  - Not building: autocomplete, a fake filesystem, tabs, split panes. It is a personality feature
-    wearing a terminal's clothes, not an emulator.
+  - **The filter for new commands:** the terminal only earns a command that does something you
+    cannot do by pointing. Without that rule it accumulates commands the way the source view
+    accumulated features. It is a _control surface_, not a second way to read the page.
+    - **`perf`** — real transfer sizes and timings from the visitor's own page load, via the
+      Navigation and Resource Timing APIs. Nothing hard-coded: the site's speed claim becomes
+      verifiable in the reader's browser instead of asserted in a README. Three things it must
+      keep doing: count only same-origin resources (extensions and the dev toolbar inject into
+      the same timeline), say so loudly when running against the dev server (those numbers are
+      nothing like the built site's), and omit first paint when it postdates load — Chrome defers
+      paint in background tabs, and printing `first paint 3232ms` next to `load 69ms` reads as
+      broken rather than slow.
+    - **`curl /taha`** — prints the machine view as an HTTP response. Small, but it makes the
+      terminal, the source view and the `/api/whoami.json` easter egg one idea seen three ways.
+      Unknown paths return a real-looking 404.
+    - **`get` / `set` / `theme` / `reset` — Phase 3.5.** The payoff. Once the JSON viewer is
+      editable, these drive the _same state_, so editing a value in the viewer shows up in `get`,
+      and `theme #ff6b6b` recolours the site and the viewer together. That is what stops the
+      terminal being a third way to read the page.
+    - **`whoami` — Phase 4.** Visitor id, first vs returning, what has been discovered.
+  - Not building: autocomplete, a fake filesystem, tabs, split panes, a second mini-game (the API
+    Simulation is the game). It is a personality feature wearing a terminal's clothes, not an
+    emulator.
 
 - **The API Simulation** — the first of the site's two headline interactions, and the one that
   demonstrates engineering depth. It replaces what

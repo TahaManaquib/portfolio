@@ -144,7 +144,7 @@ export const site = {
     web: '/',
     terminal: {
       open: '⌘K',
-      commands: ['about', 'stack', 'contact', 'help', 'cls'],
+      commands: ['about', 'stack', 'contact', 'perf', 'curl', 'help', 'cls'],
       hidden: ['sudo hire taha'],
     },
   },
