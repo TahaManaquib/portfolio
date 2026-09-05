@@ -56,6 +56,21 @@ export interface SiteContent {
     readonly also: readonly string[];
   };
   readonly contact: readonly ContactLink[];
+  /**
+   * Real ways into the site. This is the terminal's only signpost — ⌘K is
+   * advertised nowhere on screen, so without this the feature is undiscoverable.
+   * The hidden command is listed on purpose: a secret leaking through an API
+   * response is a better joke than a secret nobody finds, and it stays honest
+   * because these commands genuinely exist (CLAUDE.md, "Source view").
+   */
+  readonly interfaces: {
+    readonly web: string;
+    readonly terminal: {
+      readonly open: string;
+      readonly commands: readonly string[];
+      readonly hidden: readonly string[];
+    };
+  };
   readonly resumeHref: string;
   /** This site's own repo. Load-bearing: it is the only real code on display. */
   readonly repoHref: string;
@@ -124,6 +139,15 @@ export const site = {
       href: 'https://www.linkedin.com/in/taha-manaquib/',
     },
   ],
+
+  interfaces: {
+    web: '/',
+    terminal: {
+      open: '⌘K',
+      commands: ['about', 'stack', 'contact', 'help', 'cls'],
+      hidden: ['sudo hire taha'],
+    },
+  },
 
   // Served from `public/`. Renamed from "Taha Manaquib CV.pdf" so the URL needs
   // no %20 escaping; the capitalised name still reads well once downloaded.

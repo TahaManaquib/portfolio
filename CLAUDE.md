@@ -140,8 +140,50 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
 
 ### Interactive layer (discovered, not advertised)
 
-- **Terminal** — entry via ⌘K or a small icon. Commands: `about`, `stack`, `contact`, `clear`,
-  plus at least one hidden command (`sudo hire taha` → playful "permission denied").
+- **Terminal** — a real editor-style terminal, not a command palette. That distinction carries
+  most of the character, so it is part of the spec:
+  - **A panel that slides up from the bottom**, full width, overlaying the page (the page stays
+    scrollable behind it, like an editor). Never a centred modal.
+  - **Height is drag-adjustable** from a handle on the top edge. Defaults to **50dvh** on first
+    open, then whatever the visitor set. Bounded: min ~120px so it stays usable, max ~90dvh so
+    the site is never entirely swallowed.
+  - **Panel height persists to localStorage** — and this is a deliberate exception to the
+    ephemeral rule that governs edits, comments and palette. Those change _content_, where a
+    returning visitor finding the site altered would be confusing. Height is a _UI preference_,
+    the category CLAUDE.md already keeps in localStorage, and a visitor who resized their
+    terminal would expect it remembered.
+  - **The wheel stays inside the panel.** `overscroll-behavior: contain` on the scrollback stops
+    it chaining to the page at the top and bottom of the buffer, but that only governs chaining
+    out of a _scroll container_ — the title bar and the resize handle are not scrollable, so a
+    wheel over them was never contained and scrolled the site behind. A non-passive `wheel`
+    listener on the panel covers those. Note `overflow: hidden` on the panel does NOT fix this
+    and clips the resize handle; it was tried and reverted.
+  - **Non-modal.** No focus trap. Focus moves to the input on open; `Esc` closes and returns
+    focus where it came from.
+  - **The resize handle must be keyboard-operable** — `role="separator"`, `aria-orientation`,
+    `aria-valuenow`, arrow keys to nudge. If it can be resized with a mouse it must be resizable
+    without one.
+  - **Entry:** ⌘K / Ctrl+K on desktop. On touch there is no keyboard, so a small visible button
+    appears there instead (`@media (hover: none)`). On desktop that same button stays in the
+    accessibility tree but is visually hidden — otherwise the feature would be undiscoverable to
+    a desktop screen-reader user.
+  - Commands: `about`, `stack`, `contact`, `cls`, `help`, plus the hidden `sudo hire taha`
+    (playful "permission denied"). Content commands render from the content module.
+  - **Command history** on ArrowUp/ArrowDown, with the half-typed line preserved and consecutive
+    duplicates skipped (as shells do with HISTCONTROL=ignoredups).
+  - **The session persists.** Scrollback and history are written to localStorage, so closing the
+    panel or refreshing the page does not wipe it. `cls` is the only thing that clears it, and it
+    clears the screen only — never the panel height. Capped at 400 lines and 50 history entries
+    so a bored visitor cannot fill the storage quota.
+    Stored data is treated as **untrusted on read**: every entry is shape-validated, because it
+    can be hand-edited, corrupted, or left over from an older version of the component.
+    A scrollback emptied by `cls` reads as "no session" on the next load, so the banner returns
+    rather than the panel opening blank with no hint in it.
+  - The clear command is **`cls`**, not `clear`. Its name lives in
+    `site.interfaces.terminal.commands`, which is also what the source view advertises — the
+    terminal derives its command list from there, so the two cannot drift.
+  - Not building: autocomplete, a fake filesystem, tabs, split panes. It is a personality feature
+    wearing a terminal's clothes, not an emulator.
 
 - **The API Simulation** — the first of the site's two headline interactions, and the one that
   demonstrates engineering depth. It replaces what
@@ -249,8 +291,14 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
   - **Zero JS.** The toggle is a visually-hidden checkbox plus `:checked ~` sibling selectors —
     natively keyboard-operable and screen-reader-labelled, no island. State does not need to
     survive a reload; this is a single-page site.
-  - **Honest content.** The machine view reflects what is actually on the page. No invented
-    fields, no fake status codes, no pretending a request happened.
+  - **Honest content.** The machine view reflects what is actually true of the site. No invented
+    fields, no fake status codes, no pretending a request happened. It _may_ describe real
+    capabilities the human view does not surface — it must never describe things that are false.
+  - **It is the terminal's signpost.** The response includes an `interfaces` block naming the
+    terminal, its shortcut, and its commands — including the hidden one. Two reasons this is
+    deliberate rather than a spoiler: the terminal is otherwise undiscoverable (⌘K is advertised
+    nowhere), and a secret command leaking through an API response is a better joke than a
+    secret command nobody finds. It stays honest because those commands genuinely exist.
   - It shares its shape with the `/api/whoami.json` easter egg, so the two reinforce each other
     instead of being two unrelated jokes.
 

@@ -1,0 +1,105 @@
+---
+// Entry point for the terminal. This is the only thing the terminal costs the
+// recruiter path: a button plus a small listener. Preact and the panel itself
+// are a separate chunk, fetched on the first ⌘K or tap.
+//
+// The button is visible only on touch, where there is no keyboard to press ⌘K.
+// On desktop it stays in the accessibility tree but is visually hidden —
+// otherwise the terminal would be undiscoverable to a screen-reader user, since
+// the shortcut is advertised nowhere on screen (CLAUDE.md).
+---
+
+<button type="button" class="terminal-open" data-terminal-open aria-keyshortcuts="Meta+K Control+K">
+  <span class="glyph" aria-hidden="true">&gt;_</span>
+  <span class="sr-only">Open terminal</span>
+</button>
+
+<script>
+  const openers = document.querySelectorAll<HTMLElement>('[data-terminal-open]');
+
+  // Cached so the chunk is fetched at most once.
+  let pending: Promise<{ open: () => void; close: () => void; isOpen: () => boolean }> | null =
+    null;
+
+  function load() {
+    pending ??= import('../islands/terminal/mount').then((m) => m.terminal());
+    return pending;
+  }
+
+  function open() {
+    void load().then((t) => t.open());
+  }
+
+  document.addEventListener('keydown', (event) => {
+    if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
+    if (event.key.toLowerCase() !== 'k') return;
+    event.preventDefault();
+    void load().then((t) => (t.isOpen() ? t.close() : t.open()));
+  });
+
+  openers.forEach((el) => el.addEventListener('click', open));
+</script>
+
+<style>
+  .terminal-open {
+    position: fixed;
+    right: 1rem;
+    bottom: 4.5rem;
+    z-index: 50;
+    display: inline-flex;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    background-color: var(--color-bg);
+    color: var(--color-fg-muted);
+    cursor: pointer;
+    transition:
+      color 150ms ease,
+      border-color 150ms ease;
+  }
+
+  .terminal-open:hover {
+    color: var(--color-accent);
+    border-color: var(--color-accent-dim);
+  }
+
+  .terminal-open .glyph {
+    font-family: var(--font-mono);
+    font-size: 13px;
+  }
+
+  /* Desktop: reachable by assistive tech, invisible to everyone else, because
+     ⌘K already covers it and the corner is shared with the source-view toggle.
+     This is the `sr-only` recipe rather than `display: none`, which would drop
+     it out of the accessibility tree entirely. */
+  @media (hover: hover) and (pointer: fine) {
+    .terminal-open {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      min-width: 0;
+      min-height: 0;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .terminal-open:focus-visible {
+      position: fixed;
+      width: auto;
+      height: auto;
+      min-width: 2.75rem;
+      min-height: 2.75rem;
+      margin: 0;
+      overflow: visible;
+      clip-path: none;
+      border: 1px solid var(--color-accent);
+    }
+  }
+</style>

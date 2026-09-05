@@ -87,7 +87,19 @@ Throughout: static/SSG rendering, mobile-first, basic accessibility (semantic HT
 
 Build, one at a time with approval between each:
 
-1. **Terminal** (⌘K entry, core commands, one hidden command)
+1. **Terminal panel** — bottom-anchored, drag-resizable, 50dvh default, height persisted to
+   localStorage, keyboard-operable separator, non-modal with `Esc` to close.
+2. **Commands** — `about`, `stack`, `contact`, `cls`, `help`, plus hidden `sudo hire taha`.
+   Content commands render from the content module; nothing is retyped.
+3. **Entry points** — ⌘K/Ctrl+K, plus a button that is visible on touch and screen-reader-only
+   on desktop.
+4. **JSON signpost** — add the `interfaces` block to the content module so the source view
+   advertises the terminal, its shortcut and its commands. Do this last: it must not advertise
+   something that does not yet work.
+
+**This is where "zero JS" ends.** ⌘K needs a listener, so the recruiter path goes from literally
+0 bytes to a small always-present loader plus an on-demand chunk. Measure both and say so
+honestly — see CLAUDE.md's note under Tech stack.
 
 The **source view** was pulled forward into Phase 1 (step 8), because the background _is_ the
 machine view — the two are one idea and the background cannot be judged without the toggle that
@@ -98,7 +110,7 @@ reveals it. Its editable-values tier is Phase 3.5 below.
 > Plan Phase 2 from PHASES.md: the Terminal and the Source view, per CLAUDE.md's "Interactive
 > layer" section. For the Terminal, confirm it's code-split so it adds no weight to the
 > homepage's initial load — only fetched when the visitor actually opens it. Note the `work`
-> command is gone — commands are `about`, `stack`, `contact`, `clear`, plus the hidden one. For
+> command is gone — commands are `about`, `stack`, `contact`, `cls`, plus the hidden one. For
 > the Source view, confirm it is zero-JS (hidden checkbox + `:checked ~`), that it renders from
 > the Phase 1 content module rather than duplicating content, and that it stays small — the API
 > Simulation is still the headline interaction that carries the engineering depth. Build in
