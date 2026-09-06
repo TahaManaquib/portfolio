@@ -236,7 +236,234 @@ away` for the limiter, `reused` for the cache), so what the visitor built become
 Instrument the unlock-worthy moments as plain events/flags so achievements can be layered on
 later without rework — but no achievement UI now.
 
-### Checkpoint — cut the API Simulation back before Phase 4
+**Prompt:**
+
+> Plan Phase 3 from PHASES.md: the API Simulation system exactly as specified in CLAUDE.md's
+> "Interactive layer" section — the 5-stage progression, the hidden bug icon appearing only
+> after the first crash, and the attack toolkit with attacks becoming visibly "patched" as
+> defenses are added. Then plan the remaining easter eggs. Confirm this
+> fully replaces the old API Playground / System Status / mini-game concepts — don't build
+> those as separate features. Achievements are deferred — build the unlock moments and record
+> them as flags, but no achievement list, no /achievements page, no unlock copy. Confirm
+> everything here is code-split and loads only on interaction, and that the whole system stays
+> purely client-side and simulated (there is no backend anywhere in this project). Build one step
+> at a time and stop for my approval after each.
+
+---
+
+## Phase 3.5 — Making the source view interactive — DONE
+
+Three independent features, deliberately split so any of them could be built, reordered, or cut
+without touching the others. That split earned itself: **3.5a and 3.5b shipped, 3.5c was cut**,
+and neither decision disturbed the other two.
+
+|          |                                                                  | Needs JS? |
+| -------- | ---------------------------------------------------------------- | --------- |
+| **3.5a** | Palette editing — presets + contrast readout (**done, zero JS**) | no        |
+| **3.5b** | Tier 1 editable values, plus array add/remove (**done**)         | yes       |
+| **3.5c** | ~~Visitor comments (`//`)~~ — **cut, never built**               | —         |
+
+What shipped shares: **text never HTML**, **ephemeral** (reload restores the real thing), one
+**reset** control, and an island that loads **only when the source view is opened**.
+
+---
+
+### Terminal commands that ride on these
+
+`get` / `set` / `theme` / `reset` land with 3.5a and 3.5b — the terminal and the JSON viewer
+driving one shared state is the whole point, and it is what stops the terminal being a read-only
+view. Build them alongside the feature they expose, not as a separate pass.
+
+---
+
+### 3.5a — Palette editing
+
+**Goal:** a visiting developer recolours the site and it becomes theirs. This is what makes the
+source view a headline interaction rather than a flourish.
+
+- **Three seeds only** — background, foreground, accent. Everything else derives from them via
+  `color-mix()`. **Done** — the tokens in `global.css` are now nine `color-mix(in oklab, …)`
+  derivations of three seeds, verified to cascade when a seed is overridden. Notes:
+  - **oklab, not sRGB.** sRGB interpolation between two saturated colours passes through muddy
+    intermediates, which is exactly what a derived palette must not do for an arbitrary accent.
+  - **Percentages were fitted to the previous hand-picked palette, not guessed.** Every neutral
+    landed within 1–6 RGB units of the hex it replaced, with contrast unchanged to two decimals.
+  - **The derivation must stay runtime `var()`/`color-mix()`.** Tailwind emits a static hex
+    fallback plus the live version inside `@supports (color: color-mix(…))`; modern browsers take
+    the live one, which is what makes a seed override move everything with it.
+  - **A latent bug surfaced: `accent-dim` was doing two jobs.** It coloured decorative borders and
+    gauge fills _and_ three pieces of small text (log status codes, log tags, JSON
+    numbers/booleans). Those have different contrast floors, and measuring across six accents
+    showed a red or blue seed puts a bg-ward mix at ~4.4:1 — fine for a border, failing AA as
+    text. Split into `--color-accent-dim` (decorative, mixed toward bg) and
+    `--color-accent-soft` (text, mixed toward `--color-fg-muted`). Mixing toward fg-muted is
+    self-correcting: both endpoints clear AA, so the result does too — a deliberately weak accent
+    at 3.98:1 derives to 4.96:1, better than the seed. **Never colour text with `accent-dim`.**
+- **Contrast readout is mandatory.** Live ratio + AA/AAA verdict per seed as the visitor picks.
+  Non-negotiable: without it this feature can make the site unreadable, on a site with a hard AA
+  floor in its spec. With it, it demonstrates the opposite. **Done** — build-time for presets,
+  live for the custom picker, sharing one formatter in `src/data/contrast.ts`. It reports failure
+  honestly rather than preventing it: a bad accent reads `accent 2.5:1 below AA`.
+- **The custom picker was built and then removed at Taha's request** — "it feels weird". Do not
+  rebuild it without an explicit instruction. It worked (a plain 882-byte module, not a Preact
+  island, loaded on first contact) and the notes are kept only because they generalise: a value
+  picked while its chunk is still downloading must survive the mount, and choosing a preset while
+  a custom palette is active should honour that preset rather than snapping back to default.
+  **With it gone, 3.5a is entirely zero-JS** and the source view ships no script at all.
+- **The JSON font-size control was also removed at Taha's request.** 11px is the size the view is
+  designed at, and the control was never a site-wide type control anyway. `.tree` is now a fixed
+  11px. Do not reintroduce a size picker.
+- Controls live in the source view header strip, never in the JSON body (see CLAUDE.md).
+- Never touches the default palette. Dark stays the base for every first visit.
+
+---
+
+### 3.5b — Editable values (Tier 1)
+
+**Goal:** the source view stops being read-only. A visitor can edit **values** in the JSON and
+watch the human view change when they toggle back.
+
+Why it earns its place: the source view _claims_ the two views are the same data. Editing one and
+seeing the other change is the proof. That is an architecture demonstration, not a party trick.
+
+Why it is here and not earlier: it is the largest single feature in the plan, and the API
+Simulation — the actual centerpiece — must exist first.
+
+**Built.** Notes worth keeping:
+
+- **The editable set is derived from the DOM, not from a second list.** The island collects every
+  `[data-bind]` on the page and only makes a JSON leaf editable if its path is among them, so the
+  editable values are exactly the rendered values by construction. 44 of 59 string leaves qualify;
+  `meta.*`, `interfaces.*` and the hrefs stay read-only because nothing on the page renders them.
+- **Hrefs are deliberately not bound.** Tier 1 edits text; letting a visitor rewrite a `href`
+  invites `javascript:` into an otherwise text-only feature for no demonstration value.
+- **Text-never-HTML is structural, not promised.** Every read and write is `textContent`, and
+  paste inserts through `createTextNode` via the Range API — `execCommand` is deprecated, and the
+  replacement happens to make the rule impossible to violate. Verified: an `onerror` payload
+  renders as characters, creates zero element nodes and does not execute.
+- **One value can have several homes.** `name` renders in the hero and the footer; editing it
+  once updates both, which makes the "one dataset" claim land harder than a single binding would.
+- Enter commits rather than splitting the value in two, Escape reverts it, and the reset row stays
+  hidden until there is something to reset.
+- **The Astro whitespace trap bit again, in a new place.** Wrapping an inline value in a
+  multi-line `<span>` renders the newlines as spaces — `authorization , billing , and
+integrations .` — and Prettier reformats a hand-fixed single line straight back. The durable fix
+  is `set:text` on a self-closing element: no template children, so no formatter can reintroduce
+  whitespace. Use it for every inline bound value.
+
+**Scope is Tier 1 and stays Tier 1:**
+
+- Values only: strings, numbers, booleans, edited in place.
+- **No** structural editing: no new keys, no type changes, no raw-text JSON editing. Editing
+  values in place means there is no invalid-JSON state to design for, which is the whole reason
+  this tier is affordable.
+- **Array add/remove — Tier 2, pulled in and built at Taha's request** right after Tier 1 landed,
+  which is the decision this line was waiting on.
+  - **Arrays of objects too**, added straight after. A new entry keeps the **shape** of the
+    existing ones — same keys, in the same order — and only the values are blank and editable.
+    Keys are never editable and cannot be added or removed, which is the "no new keys, no type
+    changes" rule still holding. Unrendered arrays (`interfaces.*`) still get no controls; the
+    guard is the same DOM-derived one Tier 1 uses.
+  - **An entry is one element on each side.** A string entry is its `<li>`/`<span>`; an object
+    entry spans a `<dt>` and a `<dd>`, so those are wrapped in a `display: contents` div carrying
+    `data-bind-item`. That single handle per entry is what keeps add, remove and renumber generic
+    instead of growing a branch per shape.
+  - **`renumber` is recursive.** Renaming `contact.2` has to carry `contact.2.label` and
+    `contact.2.value` with it, however deep they sit.
+  - **A cloned object brings its nested arrays along.** They are registered for their own
+    controls and trimmed to one blank entry, rather than inheriting however many the entry they
+    were copied from happened to have.
+  - **The page metadata is editable too**, added at Taha's request. `meta.title` binds by _text_
+    — setting `<title>`'s textContent is what changes the browser tab, which makes it the most
+    visible edit on the page that is not on the page — and `meta.description` binds to the
+    `content` attribute of the description and Open Graph tags. Bound only when the page really
+    is showing the site's own metadata: the 404 passes its own title and must not be rewritten.
+    51 of 59 string leaves are now editable; the rest are `interfaces.*`, which nothing renders.
+  - **URLs are editable**, added at Taha's request after the first pass left them read-only.
+    A path can be bound as a link's destination (`data-bind-href`) instead of as text; contact
+    links, the résumé and the repo link all are. Only `http:`, `https:` and `mailto:` are
+    accepted — anything else drops the `href` entirely rather than keeping the old one. Edits are
+    local and ephemeral so a `javascript:` URL could only target the visitor's own browser, but
+    turning typed text into an executable URL is the wrong habit and refusing costs one function.
+  - **A cloned row can arrive already `contenteditable`.** A nested list's template is captured
+    after its parent's cells were wired, so `makeEditable`'s `isContentEditable` guard skipped it
+    and attached **no listeners** — the cell looked editable, accepted typing, and nothing reached
+    the page. Guard on a `WeakSet` of wired cells instead, and strip editing state from clones
+    before wiring. This is the bug that made a new stack group show one item instead of three.
+  - **Reset restores the original elements, not blanks-plus-text.** An entry carries more than
+    its bound values — `href`, `target`/`rel`, the screen-reader-only "opens in a new tab" note —
+    and none of that is editable, so none of it could be typed back. Pristine clones are captured
+    before any control is attached.
+  - **One `relabel` pass after every change**, rather than add and remove each keeping their own
+    index books. It renumbers both sides and repairs the punctuation that depends on position:
+    the trailing comma in the JSON, and the `, ` / `, and ` that turn a list back into a sentence.
+  - **The joined list is the hard case.** `pitch.highlights` renders inside a sentence, so its
+    separators are text nodes between spans. The container carries `data-bind-join="comma-and"`
+    — an attribute on an element that already exists, so no template whitespace can creep in —
+    and only text nodes strictly _between_ the first and last item are rebuilt, leaving the
+    lead-in and the full stop alone.
+  - **New rows are cloned from rendered ones, never parsed**, which keeps text-never-HTML true
+    for structural edits too.
+  - Reset restores original array _lengths_ as well as values.
+  - **Astro scopes component CSS by a `data-astro-cid` attribute that runtime-created elements
+    never get.** The add/remove buttons silently collapsed to 7x19 — well under the 24x24 target
+    floor — until their rule was marked `:global`. Worth remembering for anything an island
+    injects.
+  - **`querySelector` searches descendants, and nested arrays made that bite twice.** Looking up
+    "this list's add row" found one belonging to a _nested_ list and threw on `insertBefore`.
+    Anything addressing a list's own parts needs `:scope >`.
+  - **A branch carries `data-path` too**, so "clear the value" matched the `<details>` of an
+    object entry and wiped its whole subtree. Leaf cells are `[data-path]:not([data-kind])`.
+  - **The joined sentence has two edge cases worth keeping.** Removing the _last_ entry must drop
+    the separator _before_ it, not the text after it — that text is the full stop. And with a
+    single entry `first === last`, so the "clear between" walk runs to the end of the paragraph
+    and eats everything unless it is skipped. Both produced sentences like `authorization, and
+billing, and .` before they were fixed.
+
+### 3.5c — Visitor comments (`//`) — CUT
+
+**Cut at Taha's request before any of it was built. Do not build it without an explicit
+instruction.** The idea was an annotation layer rendered JSONC-style beside the data and surfaced
+on the human view.
+
+The reasoning it was cut on is worth keeping, because it is the same reasoning that trimmed the
+rest of this phase: the open question was never the JSON half but how a comment should show up on
+the **human** view, and every answer to that adds a permanently visible marker to a page whose
+whole design is low-noise. It would have been the only part of the discovery layer that leaves a
+mark on the recruiter path.
+
+If it is ever revived, the constraints it was designed under still hold: comments are an
+**annotation layer, never part of the payload** — JSON has no comment syntax, so putting them in
+the body would invalidate a response still labelled `application/json` — and they are **never
+persisted and never shared between visitors**, since shared comments are a guestbook, which
+CLAUDE.md lists as explicitly not-building and which would drag in moderation and a backend.
+
+Non-negotiables:
+
+1. Edits render as **text, never HTML**. A visitor typing `<img onerror=...>` sees characters.
+   Cheap now; a real vulnerability to retrofit if anything ever persists or is shared.
+2. Edits are **ephemeral** — a reload restores the real content. Do not persist to localStorage:
+   a returning visitor finding the site renamed is confusing, not delightful.
+3. A visible **reset** control.
+4. Only the **revealed** source view is interactive. Written when a faint JSON background still
+   existed — that background is gone (CLAUDE.md, "Background"), so what remains of this rule is
+   the part that still matters: the hidden branch is `display: none`, which keeps its focusable
+   controls out of the tab order and the accessibility tree. Do not swap that for
+   `visibility`/opacity.
+5. The island loads **only when the source view is opened** — never on the recruiter path.
+
+**Prompt:**
+
+> Phase 3.5 is complete: palette presets (3.5a) and editing (3.5b) are built, and visitor
+> comments (3.5c) were cut. The custom colour picker and the JSON font-size control were built and
+> then removed. Nothing here is outstanding — the next thing is the API Simulation checkpoint
+> below, before Phase 4.
+
+---
+
+## Checkpoint — cut the API Simulation back
+
+**Runs after Phase 3.5 and before Phase 4.**
 
 **The simulation is finished and it is too big. Do not start Phase 4 until this is resolved.**
 Taha's own words after stage 5 landed: _"i myself am not understanding the API endpoint part, how
@@ -271,129 +498,6 @@ Also open, and worth deciding at the same time: **whether the section deserves t
 page at all.** It sits between Stack and Contact on a deliberately minimal portfolio and is the
 largest thing on it even at three stages. A version that keeps only the crash and one fix, with
 all remaining depth in the repo, is a legitimate outcome.
-
-**Prompt:**
-
-> Plan Phase 3 from PHASES.md: the API Simulation system exactly as specified in CLAUDE.md's
-> "Interactive layer" section — the 5-stage progression, the hidden bug icon appearing only
-> after the first crash, and the attack toolkit with attacks becoming visibly "patched" as
-> defenses are added. Then plan the remaining easter eggs. Confirm this
-> fully replaces the old API Playground / System Status / mini-game concepts — don't build
-> those as separate features. Achievements are deferred — build the unlock moments and record
-> them as flags, but no achievement list, no /achievements page, no unlock copy. Confirm
-> everything here is code-split and loads only on interaction, and that the whole system stays
-> purely client-side and simulated (there is no backend anywhere in this project). Build one step
-> at a time and stop for my approval after each.
-
----
-
-## Phase 3.5 — Making the source view interactive
-
-Three independent features, deliberately split so any of them can be built, reordered, or cut
-without touching the others. Suggested order is cheapest-and-most-striking first.
-
-|          |                                                            | Needs JS?              |
-| -------- | ---------------------------------------------------------- | ---------------------- |
-| **3.5a** | Palette editing — presets, custom picker, contrast readout | presets no, picker yes |
-| **3.5b** | Tier 1 editable values                                     | yes                    |
-| **3.5c** | Visitor comments (`//`)                                    | yes                    |
-
-All three share: **text never HTML**, **ephemeral** (reload restores the real thing), one
-**reset** control, and an island that loads **only when the source view is opened**.
-
----
-
-### Terminal commands that ride on these
-
-`get` / `set` / `theme` / `reset` land with 3.5a and 3.5b — the terminal and the JSON viewer
-driving one shared state is the whole point, and it is what stops the terminal being a read-only
-view. Build them alongside the feature they expose, not as a separate pass.
-
----
-
-### 3.5a — Palette editing
-
-**Goal:** a visiting developer recolours the site and it becomes theirs. This is what makes the
-source view a headline interaction rather than a flourish.
-
-- **Three seeds only** — background, foreground, accent. Everything else derives from them via
-  `color-mix()`. Do this derivation to the tokens in `global.css` first; it is an improvement to
-  the design system on its own, and it is what stops any picked colour producing a broken theme.
-- **Contrast readout is mandatory.** Live ratio + AA/AAA verdict per seed as the visitor picks.
-  Non-negotiable: without it this feature can make the site unreadable, on a site with a hard AA
-  floor in its spec. With it, it demonstrates the opposite.
-- **Presets are zero JS** — `html:has(#theme-x:checked)` reaches `:root`, so a radio group is
-  enough. Only the custom picker needs the island.
-- Controls live in the source view header strip, never in the JSON body (see CLAUDE.md).
-- Never touches the default palette. Dark stays the base for every first visit.
-
----
-
-### 3.5b — Editable values (Tier 1)
-
-**Goal:** the source view stops being read-only. A visitor can edit **values** in the JSON and
-watch the human view change when they toggle back.
-
-Why it earns its place: the source view _claims_ the two views are the same data. Editing one and
-seeing the other change is the proof. That is an architecture demonstration, not a party trick.
-
-Why it is here and not earlier: it is the largest single feature in the plan, and the API
-Simulation — the actual centerpiece — must exist first.
-
-**Scope is Tier 1 and stays Tier 1:**
-
-- Values only: strings, numbers, booleans, edited in place.
-- **No** structural editing: no new keys, no type changes, no raw-text JSON editing. Editing
-  values in place means there is no invalid-JSON state to design for, which is the whole reason
-  this tier is affordable.
-- Array add/remove is **Tier 2** — a possible follow-on, not part of this phase. Decide only
-  after Tier 1 has been used.
-
-### 3.5c — Visitor comments (`//`)
-
-Visitors can annotate the data with `//` comments, JSONC-style, and those annotations surface on
-the human view too.
-
-**Comments are an annotation layer, not part of the payload.** JSON has no comment syntax; `//`
-is JSONC. Putting comments inside the body would make the response invalid while the header still
-claims `content-type: application/json`, which breaks the honesty rule. So the serialised body
-stays valid JSON and comments live alongside it — the visitor's notes on the data, the way review
-comments sit beside a diff rather than inside the file. Render them JSONC-style (`// text` above
-the line they annotate) in a colour that is visibly _not_ part of the data.
-
-- One comment per node, attached by the same path→node map Tier 1 already needs for value
-  binding. That shared machinery is why comments are affordable here and would not have been on
-  their own.
-- **On the human view:** a small unobtrusive marker beside the bound element, revealing the
-  comment on hover/focus. This is the part that needs a design pass before it is built — the site
-  is deliberately low-noise, and scattered annotation markers are exactly the kind of thing that
-  erodes that. Propose the treatment and get it approved before implementing.
-- Same non-negotiables as the value editing below: **text, never HTML**; **ephemeral**, cleared on
-  reload; covered by the reset control.
-- **Never persisted and never shared between visitors.** Comments that other people can see are a
-  guestbook, which CLAUDE.md lists as explicitly not-building, and would drag in moderation and a
-  backend. Local to one browser session, always.
-
-Non-negotiables:
-
-1. Edits render as **text, never HTML**. A visitor typing `<img onerror=...>` sees characters.
-   Cheap now; a real vulnerability to retrofit if anything ever persists or is shared.
-2. Edits are **ephemeral** — a reload restores the real content. Do not persist to localStorage:
-   a returning visitor finding the site renamed is confusing, not delightful.
-3. A visible **reset** control.
-4. The **background stays static text**. Only the revealed source view becomes editable, which
-   also keeps focusable controls out of the `aria-hidden` layer.
-5. The island loads **only when the source view is opened** — never on the recruiter path.
-
-**Prompt:**
-
-> Plan Phase 3.5 from PHASES.md: Tier 1 editable values plus `//` comments in the source view.
-> Read CLAUDE.md's "Source view" section first. Values only — no new keys, no type changes, no
-> raw-text editing. Comments are an annotation layer, not part of the JSON body, and their
-> treatment on the human view needs my approval before you build it.
-> Confirm edits render as text not HTML, that they are ephemeral with a reset control, that the
-> background stays static, and that the island loads only when the source view is opened. Build
-> one step at a time and stop for my approval after each.
 
 ---
 

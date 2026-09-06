@@ -19,9 +19,9 @@ function separatorAfter(index: number, total: number): string {
 ---
 
 <section id="top" tabindex="-1" class="border-border py-section-sm sm:py-section border-b">
-  <p class="text-fg-muted font-mono text-xs tracking-wider uppercase">{role}</p>
+  <p class="text-fg-muted font-mono text-xs tracking-wider uppercase" data-bind="role">{role}</p>
 
-  <h1 class="text-display text-fg mt-4 font-medium">{name}</h1>
+  <h1 class="text-display text-fg mt-4 font-medium" data-bind="name">{name}</h1>
 
   {
     /* Emitted as one array expression, not as sibling template nodes: Astro
@@ -29,12 +29,13 @@ function separatorAfter(index: number, total: number): string {
       an indented <span> on its own line renders as "authorization , billing".
       Array items have no whitespace between them. */
   }
-  <p class="text-fg mt-6 max-w-2xl text-lg text-balance sm:text-xl">
+  <p class="text-fg mt-6 max-w-2xl text-lg text-balance sm:text-xl" data-bind-join="comma-and">
     {
       [
-        `${pitch.lead} — `,
+        <span data-bind="pitch.lead" set:text={pitch.lead} />,
+        ' — ',
         ...pitch.highlights.flatMap((term, i) => [
-          <span class="text-accent">{term}</span>,
+          <span class="text-accent" data-bind={`pitch.highlights.${i}`} set:text={term} />,
           separatorAfter(i, pitch.highlights.length),
         ]),
         '.',
@@ -44,8 +45,11 @@ function separatorAfter(index: number, total: number): string {
 
   <ul class="mt-8 flex flex-wrap gap-2">
     {
-      proof.map((item) => (
-        <li class="border-border text-fg-muted rounded-sm border px-2.5 py-1.5 font-mono text-xs">
+      proof.map((item, i) => (
+        <li
+          class="border-border text-fg-muted rounded-sm border px-2.5 py-1.5 font-mono text-xs"
+          data-bind={`proof.${i}`}
+        >
           {item}
         </li>
       ))
@@ -56,7 +60,7 @@ function separatorAfter(index: number, total: number): string {
     availability.open && (
       <p class="text-fg-muted mt-10 flex items-center gap-2 font-mono text-xs tracking-wider uppercase">
         <span class="bg-accent size-1.5 shrink-0 rounded-full" aria-hidden="true" />
-        {availability.label}
+        <span data-bind="availability.label">{availability.label}</span>
       </p>
     )
   }

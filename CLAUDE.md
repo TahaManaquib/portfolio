@@ -47,6 +47,12 @@ on one route:
 | Backend             | **None.** See below.                                                                  |
 | Tooling             | Prettier. No test framework, no CI, no component library until something demands one. |
 
+**Typecheck with `npm run check`, never `astro check` alone.** `astro check` does not traverse the
+island `.ts` files — they are reached only through a dynamic `import()` inside an inline `<script>`
+— so it reported a clean bill of health on a module containing an undefined variable that threw on
+load and disabled the whole feature. `npm run check` runs `astro check && tsc --noEmit`; the second
+half is the one that covers `src/islands/**`.
+
 Why Astro: it ships **zero client JS by default**, so the recruiter path is HTML + CSS with
 nothing to hydrate. Its islands model maps 1:1 onto the code-splitting rule below — interactive
 features physically cannot leak into the initial page load. Do not swap the framework without an
@@ -148,7 +154,7 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
     open, then whatever the visitor set. Bounded: min ~120px so it stays usable, max ~90dvh so
     the site is never entirely swallowed.
   - **Panel height persists to localStorage** — and this is a deliberate exception to the
-    ephemeral rule that governs edits, comments and palette. Those change _content_, where a
+    ephemeral rule that governs edits and palette. Those change _content_, where a
     returning visitor finding the site altered would be confusing. Height is a _UI preference_,
     the category CLAUDE.md already keeps in localStorage, and a visitor who resized their
     terminal would expect it remembered.
@@ -305,7 +311,7 @@ requests per window`). No second panel, no discovery required: it shows up exact
   harder to follow than any part of it, and Taha could not follow it himself. Treat the stage
   list above as _what was built_, not as settled scope: the visitor-facing path is expected to
   shrink, most likely to three stages ending at the cache, with the remaining engine kept in the
-  repo for the engineer who opens the source. See the checkpoint at the end of Phase 3 in
+  repo for the engineer who opens the source. See the checkpoint between Phase 3.5 and Phase 4 in
   `PHASES.md` for the full diagnosis. **Do not extend this section further** — no new stages, no
   new attacks, no new counters — until that cut has been made.
 
@@ -341,14 +347,17 @@ requests per window`). No second panel, no discovery required: it shows up exact
   - One restrained token colour scheme drawn from the existing palette — keys, string values,
     numbers/booleans, punctuation. Legibility, not decoration. Punctuation carries structural
     meaning in JSON, so it must clear AA; `--color-fg-subtle` is not eligible.
-  - A font-size control **scoped to the JSON only** — never a site-wide type control.
-  - **Editable values (Tier 1), deferred to Phase 3.5.** Values only: strings, numbers, booleans
-    edited in place, live-bound to the human view. No structural editing — no new keys, no
-    changing types, no raw-text JSON editing. Editing values in place means there is no invalid
-    state to handle, which is what keeps this small.
-    Rules for it when built: edits render as **text, never HTML** (a visitor typing a tag must
-    see the characters); edits are **ephemeral** — a reload restores the real content, nothing
-    is persisted to localStorage; and a reset control is provided.
+  - ~~A font-size control scoped to the JSON only.~~ **Built and removed at Taha's request** —
+    11px is the size the view is designed at. Do not reintroduce one.
+  - **Editable values — built.** Values only: strings edited in place, live-bound to the human
+    view as text, as a link's destination, or as page metadata (editing `meta.title` moves the
+    browser tab). **Array add/remove is built too**, for arrays of strings and of objects — a new
+    object keeps the shape of its siblings, same keys in the same order, with only the values
+    blank and editable. Still no new keys, no type changes and no raw-text JSON editing, which is
+    what keeps an invalid state unreachable. Edits render as **text, never HTML**; they are
+    **ephemeral** — a reload restores the real content, nothing is persisted; and there is a
+    reset control. Only values the page actually renders are editable, derived from the DOM
+    rather than from a second list.
   - **Palette editing (Phase 3.5a).** Preset themes plus a custom colour picker, so a visiting
     developer can recolour the site and see it become theirs. This is the reason the source view
     counts as a headline interaction rather than a flourish.
@@ -363,26 +372,35 @@ requests per window`). No second panel, no discovery required: it shows up exact
       visitor can make the site unreadable in two clicks, on a site whose spec has a hard AA
       floor. With it, the weakest part of the feature becomes a visible demonstration that
       accessibility was thought about.
-    - Presets need **zero JS** (`html:has(#theme-x:checked)` reaches `:root`). Only the custom
-      picker needs an island, since CSS cannot read an `<input type="color">` value.
+    - Presets need **zero JS** (`html:has(#theme-x:checked)` reaches `:root`). **Built**: four
+      dark presets, each setting only the three seeds. A custom colour picker was built alongside
+      them and **removed at Taha's request** — it needed a script, being the one thing here CSS
+      cannot do. The source view therefore ships no JavaScript at all. Do not rebuild the picker
+      without an explicit instruction.
     - Controls live in the source view's header strip, **not in the JSON body** — the body is
       content; colours are viewer settings. Putting `theme.accent` in the payload would quietly
       turn `GET /taha` from a profile response into a config document.
     - **Ephemeral**, like every other edit: reload restores the real palette. Covered by reset.
-  - **Visitor comments (`//`), also Phase 3.5.** An annotation layer, never part of the payload:
-    JSON has no comment syntax, so putting them in the body would invalidate a response still
-    labelled `application/json`. Rendered JSONC-style beside the data and surfaced on the human
-    view. Same rules as above — text not HTML, ephemeral, reset-able — plus one more: comments are
-    **never persisted and never shared between visitors**. Shared comments are a guestbook, which
-    is on the not-building list and needs a backend and moderation.
+  - ~~**Visitor comments (`//`).**~~ **Cut at Taha's request, never built.** Do not build it
+    without an explicit instruction. The unresolved half was never the JSON but how a comment
+    would show on the **human** view: every treatment adds a permanently visible marker to a page
+    whose whole design is low-noise, and it would have been the only part of the discovery layer
+    leaving a mark on the recruiter path. If revived: comments are an annotation layer and never
+    part of the payload (JSON has no comment syntax, so putting them in the body would invalidate
+    a response still labelled `application/json`), and they are never persisted and never shared
+    between visitors — shared comments are a guestbook, which is on the not-building list.
 
   Rules:
   - **One source of truth.** Both views are generated at build time from a single typed content
     module. The content is never written twice. If a change to the human view does not
     automatically change the machine view, the implementation is wrong.
-  - **Zero JS.** The toggle is a visually-hidden checkbox plus `:checked ~` sibling selectors —
-    natively keyboard-operable and screen-reader-labelled, no island. State does not need to
-    survive a reload; this is a single-page site.
+  - **Zero JS for everything except editing.** The toggle is a visually-hidden checkbox plus
+    `:checked ~` sibling selectors — natively keyboard-operable and screen-reader-labelled, no
+    island — and the palette presets are a radio group `html:has(#theme-x:checked)` carries up to
+    `:root`. Editing is the one thing here that genuinely cannot be done in CSS, so it is the one
+    thing that loads a script, and only once the view is actually opened. Do not let anything else
+    reach for JavaScript without that same argument. State does not need to survive a reload;
+    this is a single-page site.
   - **Honest content.** The machine view reflects what is actually true of the site. No invented
     fields, no fake status codes, no pretending a request happened. It _may_ describe real
     capabilities the human view does not surface — it must never describe things that are false.

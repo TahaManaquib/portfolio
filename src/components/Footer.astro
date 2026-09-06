@@ -22,6 +22,7 @@ const year = new Date().getFullYear();
   >
     <a
       href={site.repoHref}
+      data-bind-href="repoHref"
       target="_blank"
       rel="noopener noreferrer"
       class="text-fg hover:text-accent decoration-border hover:decoration-accent-dim inline-flex min-h-11 w-fit items-center text-sm underline underline-offset-4 transition-colors duration-150"
@@ -30,7 +31,10 @@ const year = new Date().getFullYear();
       <span class="sr-only">&nbsp;(opens in a new tab)</span>
     </a>
 
-    <p class="text-fg-muted font-mono text-xs">&copy; {year} {site.name}</p>
+    <p class="text-fg-muted font-mono text-xs">
+      &copy; {year}
+      <span data-bind="name" set:text={site.name} />
+    </p>
   </div>
 
   {
