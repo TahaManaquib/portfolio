@@ -25,14 +25,30 @@ const decoder = new TextDecoder();
  * The bytes are walked in chunks rather than spread into `String.fromCharCode`,
  * which overflows the call stack on large inputs.
  */
-export function toBase64(text: string): string {
-  const bytes = encoder.encode(text);
+export function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
   const CHUNK = 0x8000;
   for (let i = 0; i < bytes.length; i += CHUNK) {
     binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
   }
   return btoa(binary);
+}
+
+export function toBase64(text: string): string {
+  return bytesToBase64(encoder.encode(text));
+}
+
+/** base64 -> base64url: the two swapped characters, and no padding. */
+function urlify(b64: string): string {
+  return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+export function toBase64Url(text: string): string {
+  return urlify(toBase64(text));
+}
+
+export function bytesToBase64Url(bytes: Uint8Array): string {
+  return urlify(bytesToBase64(bytes));
 }
 
 /** Bytes back to UTF-8 text. Throws on input that is not valid base64. */
@@ -184,6 +200,69 @@ export async function digest(name: HashName, text: string): Promise<string> {
   }
   const buffer = await subtle.digest(subtleName(name), encoder.encode(text));
   return [...new Uint8Array(buffer)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/* -------------------------------------------------------------------------- */
+/* HS256 — signing and verifying                                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * These exist for the terminal's unlock puzzle, and they are the real
+ * algorithm: HMAC-SHA256 over `header.payload`, exactly as the JWT spec says.
+ *
+ * **The key they use is shipped in the bundle, so it is not a secret**, and
+ * nothing here protects anything. That is the joke and it is stated wherever a
+ * visitor can see it — a client-side signing key is theatre, which is worth
+ * demonstrating honestly rather than pretending otherwise. Anyone who reads the
+ * key can mint their own token, and they are welcome to; that is the deeper
+ * easter egg, not a hole.
+ */
+async function hmacKey(secret: string, usage: 'sign' | 'verify'): Promise<CryptoKey> {
+  const subtle = globalThis.crypto?.subtle;
+  if (!subtle) throw new Error('WebCrypto is unavailable here — it needs a secure context');
+  return subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, [
+    usage,
+  ]);
+}
+
+async function hmac(data: string, secret: string): Promise<string> {
+  const key = await hmacKey(secret, 'sign');
+  const signature = await globalThis.crypto.subtle.sign('HMAC', key, encoder.encode(data));
+  return bytesToBase64Url(new Uint8Array(signature));
+}
+
+/** Builds a signed JWT. Used at build time to mint the token the puzzle hides. */
+export async function signHs256(payload: Record<string, unknown>, secret: string): Promise<string> {
+  const body = `${toBase64Url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))}.${toBase64Url(
+    JSON.stringify(payload),
+  )}`;
+  return `${body}.${await hmac(body, secret)}`;
+}
+
+/**
+ * Compares without an early return on the first differing character.
+ *
+ * It is not load-bearing here — the key is public and there is nothing to
+ * protect — but writing the comparison the other way in a file about signature
+ * verification would be the wrong thing to have in a portfolio.
+ */
+function constantTimeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i += 1) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+/** True when the signature genuinely matches. Malformed input is false, not a throw. */
+export async function verifyHs256(token: string, secret: string): Promise<boolean> {
+  const parts = token.trim().split('.');
+  if (parts.length !== 3) return false;
+  try {
+    const expected = await hmac(`${parts[0]}.${parts[1]}`, secret);
+    return constantTimeEqual(expected, parts[2] as string);
+  } catch {
+    return false;
+  }
 }
 
 /* -------------------------------------------------------------------------- */

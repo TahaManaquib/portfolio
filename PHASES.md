@@ -744,10 +744,48 @@ the site to get actual work done, and it is met: the digests match the published
     comment naming the other. `aria-valuemax` was hardcoded to `90` for the same reason and is
     now derived.
 
-### 3.6c — Terminal: secrets worth finding
+### 3.6c — Terminal: secrets worth finding — DONE
 
-A small challenge chain with locked commands and a token findable elsewhere on the site. Makes
-`sudo hire taha` earnable instead of a one-line joke.
+A four-step chain, and `sudo hire taha` is now earnable instead of only a joke.
+
+1. `help` ends with **"not everything is listed."**
+2. **`auth`** reports the session unauthenticated, shows `usage: auth <token>`, and points at the
+   page source — "this site ships its own source. that is where credentials leak in real life
+   too." Where to look, not what to look for.
+3. A genuine HS256 JWT sits in **an HTML comment in the shipped page**. It is the only comment in
+   the output, so the puzzle is noticing that view-source is worth doing at all. `jwt <token>`
+   decodes it; the payload's own `note` claim says to hand it to `auth`, so the token
+   self-documents for anyone who finds it without the terminal.
+4. `auth <token>` **verifies the signature** and grants `sudo`. After that `sudo hire taha`
+   succeeds — contact details and `exit 0` — and `help` reveals the command it had been hiding.
+
+Notes worth keeping:
+
+- **The verification is real**, not a string comparison: HMAC-SHA256 in `tools.ts`, asserted
+  against `node:crypto` rather than only against itself. The token is minted at build time in
+  `Base.astro`, so the comment carries a signature that was actually computed. Node and the
+  browser share one `crypto.subtle` path.
+- **The key ships in the bundle and the terminal says so on every success.** That is the lesson,
+  not a caveat — client-side verification is theatre. Forging your own token by reading the key is
+  the deeper easter egg. Nothing here protects anything, and nothing pretends to.
+- **Claims are read only after the signature holds.** Trusting an unverified payload is the exact
+  mistake this section is about; the tamper test grafts a valid signature onto an altered payload
+  (`scope: owner`) and asserts it is rejected.
+- **No `exp` on the token**, asserted. An expiry would break the puzzle at some future date,
+  silently, with nobody watching — the failure mode is "the site looks broken to whoever finds it
+  next", which no test would ever catch after the fact.
+- **The layering bit back.** `src/data/secret.ts` first imported `signHs256` from
+  `src/islands/terminal/tools.ts`. The bundler was happy; `node --experimental-strip-types` was
+  not, because it will not resolve an extensionless relative import. That was the right complaint
+  for the wrong reason — data should not depend on an island — so `secret.ts` is now
+  dependency-free and the signing happens where it is used.
+- **The unlock persists**, deliberately unlike the sandbox's drafts: a draft is an unfinished
+  attempt, this is earned progress. It is the Phase 4 "access" residue and the Phase 5 achievement
+  flag, recorded with no UI as CLAUDE.md requires. Six malformed stored values were fed to it —
+  bad JSON, an object, an array of numbers, `null`, a mixed array, an empty array — and all six
+  degrade to "unauthenticated" rather than throwing.
+- **Cost:** always-present JS unchanged at 1,270 B gzipped. The signing key and verifier live only
+  in the on-demand terminal chunk, checked by grepping the built assets rather than assumed.
 
 ### 3.6d — Terminal: the control surface
 

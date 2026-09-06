@@ -10,6 +10,7 @@
  * `tools.ts`, which has no DOM in it and is tested in Node.
  */
 import { site } from '../../data/site';
+import { PUBLIC_SIGNING_KEY, SUDO_SCOPE } from '../../data/secret';
 import {
   HASHES,
   MAX_UUIDS,
@@ -19,7 +20,9 @@ import {
   isHashName,
   toBase64,
   uuids,
+  verifyHs256,
 } from './tools';
+import { grant, has, scopes } from './unlock';
 
 export type Line = { kind: 'in' | 'out' | 'err' | 'dim'; text: string };
 
@@ -189,6 +192,102 @@ function usageError(usage: string, hint: string): Line[] {
 }
 
 /* -------------------------------------------------------------------------- */
+/* auth — the unlock puzzle                                                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The honesty line, printed on every successful verification.
+ *
+ * The signature check below is real HMAC-SHA256. The key it checks against
+ * ships in this bundle, which means it is not a secret and this is not a
+ * security boundary — saying so is the entire point of putting it on the site
+ * of someone whose subject is authorization.
+ */
+const THEATRE = 'verified with a key that ships in this bundle — so it is not a secret.';
+
+async function auth(arg: string): Promise<Line[]> {
+  const held = scopes();
+
+  if (!arg) {
+    return [
+      out(
+        `scopes  ${held.length > 0 ? held.join(', ') : 'none — this session is unauthenticated'}`,
+      ),
+      dim(''),
+      dim('usage: auth <token>'),
+      // The breadcrumb. It says where to look without saying what to look for,
+      // and it happens to be true of production systems rather more often than
+      // anyone would like.
+      dim('this site ships its own source. that is where credentials leak in'),
+      dim('real life too.'),
+    ];
+  }
+
+  if (!(await verifyHs256(arg, PUBLIC_SIGNING_KEY))) {
+    return [
+      err('signature does not verify'),
+      dim('that token was not issued here, or it has been altered.'),
+      dim("decode it with 'jwt' to see what you actually have."),
+    ];
+  }
+
+  // Only read the payload once the signature holds. Trusting claims from an
+  // unverified token is the mistake this whole section is about.
+  let scope: unknown;
+  try {
+    scope = decodeJwt(arg).payload.scope;
+  } catch {
+    return [err('the signature verifies but the payload does not parse')];
+  }
+  if (typeof scope !== 'string' || scope !== SUDO_SCOPE) {
+    return [err(`signature is valid, but the token grants no scope this terminal knows`)];
+  }
+
+  if (!grant(scope)) {
+    return [out(`already authorised — scope: ${scope}`), dim(THEATRE)];
+  }
+  return [
+    out(`signature verified — scope: ${scope}`),
+    dim(THEATRE),
+    dim(''),
+    out('visitor added to the sudoers file.'),
+    dim('try the thing that was denied before.'),
+  ];
+}
+
+/** The hidden command, which now has two endings. */
+function sudo(): Line[] {
+  if (has(SUDO_SCOPE)) {
+    const find = (label: string) => site.contact.find((c) => c.label === label)?.value ?? '';
+    return [
+      err('[sudo] password for visitor:'),
+      dim(''),
+      out('verified. visitor is in the sudoers file.'),
+      dim(''),
+      out('hiring taha…'),
+      dim(`  email    ${find('email')}`),
+      dim(`  github   ${find('github')}`),
+      dim(`  resume   ${site.resumeHref}`),
+      dim(''),
+      out('exit 0'),
+    ];
+  }
+
+  return [
+    err('[sudo] password for visitor:'),
+    dim(''),
+    err('Sorry, user visitor is not in the sudoers file.'),
+    err('This incident has been reported.'),
+    dim(''),
+    out(`…to ${site.contact.find((c) => c.label === 'email')?.value ?? 'him'}, actually.`),
+    out('He says the answer is probably yes.'),
+    dim(''),
+    // What is missing, not how to get it.
+    dim('(a scope would change this.)'),
+  ];
+}
+
+/* -------------------------------------------------------------------------- */
 /* the registry                                                                */
 /* -------------------------------------------------------------------------- */
 
@@ -224,6 +323,11 @@ const COMMANDS: Record<string, Command> = {
   },
   uuid: { usage: 'uuid [count]', blurb: `generate v4 UUIDs, up to ${MAX_UUIDS}`, run: uuid },
 
+  auth: {
+    usage: 'auth [token]',
+    blurb: 'show this session’s scopes, or claim one',
+    run: auth,
+  },
   help: { usage: 'help', blurb: 'this list', run: () => help() },
   cls: { usage: 'cls', blurb: 'clear the screen', run: () => 'cls' },
 };
@@ -232,7 +336,7 @@ const COMMANDS: Record<string, Command> = {
 const GROUPS: readonly (readonly string[])[] = [
   ['about', 'stack', 'contact'],
   ['jwt', 'hash', 'base64', 'uuid'],
-  ['help', 'cls'],
+  ['auth', 'help', 'cls'],
 ];
 
 function help(): Line[] {
@@ -247,10 +351,17 @@ function help(): Line[] {
     }
   });
 
+  // Earned, so it stops being a secret. Revealing it here is the reward for
+  // solving the chain — the list itself changes once you hold the scope.
+  if (has(SUDO_SCOPE)) {
+    lines.push(dim(''));
+    lines.push(out(`  ${HIDDEN_COMMAND.padEnd(width)}   you earned this one`));
+  }
+
   lines.push(dim(''));
   lines.push(dim('the tools run here in your browser — nothing is sent anywhere.'));
   // The nudge, not the answer. The answer is in the source view.
-  lines.push(dim('not everything is listed.'));
+  if (!has(SUDO_SCOPE)) lines.push(dim('not everything is listed.'));
   return lines;
 }
 
@@ -272,17 +383,7 @@ export function runCommand(raw: string): Output | Promise<Output> {
   const input = raw.trim();
   if (!input) return [];
 
-  if (input.replace(/\s+/g, ' ').toLowerCase() === HIDDEN_COMMAND) {
-    return [
-      err('[sudo] password for visitor:'),
-      dim(''),
-      err('Sorry, user visitor is not in the sudoers file.'),
-      err('This incident has been reported.'),
-      dim(''),
-      out(`…to ${site.contact.find((c) => c.label === 'email')?.value ?? 'him'}, actually.`),
-      out('He says the answer is probably yes.'),
-    ];
-  }
+  if (input.replace(/\s+/g, ' ').toLowerCase() === HIDDEN_COMMAND) return sudo();
 
   const split = /^(\S+)\s*([\s\S]*)$/.exec(input);
   const verb = (split?.[1] ?? '').toLowerCase();

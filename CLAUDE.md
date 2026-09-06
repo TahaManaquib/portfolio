@@ -242,11 +242,33 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
        - **A command may return a Promise**, because `crypto.subtle` is async. The input echoes
          immediately and the output appends when it resolves, so the line never looks ignored.
        - `uuid` is capped at 10 so it cannot push out the 400-line scrollback.
-    2. **Secrets worth finding.** A small challenge chain: some commands are locked and say what
-       is missing without saying how to get it, and the token that unlocks them is findable
-       elsewhere on the site — decoded with `jwt` to read the flag. This is what turns `sudo hire
-taha` from a one-line joke into something that can actually be **earned**. An
-       auth-flavoured challenge on an auth engineer's site is the point, not a coincidence.
+    2. **Secrets worth finding — built.** The chain is four steps: `help` says "not everything is
+       listed"; `auth` reports the session as unauthenticated and shows its usage; a real HS256
+       JWT sits in an HTML comment in the page source; `auth <token>` verifies it and grants the
+       `sudo` scope, after which `sudo hire taha` **succeeds** instead of denying and `help`
+       reveals it. An auth-flavoured challenge on an auth engineer's site is the point, not a
+       coincidence. Rules:
+       - **The signature is really verified** — HMAC-SHA256 in `tools.ts`, minted at build time
+         in `Base.astro` so the token in the comment carries a genuine signature rather than a
+         pasted string. Node and the browser share one `crypto.subtle` implementation.
+       - **And the key ships in the bundle, which is said out loud.** Every successful `auth`
+         prints that the key is not a secret. That is the joke and the lesson: client-side
+         verification is theatre. Anyone who reads the key can mint their own token — that is the
+         deeper easter egg, not a hole, because nothing here protects anything.
+       - **Claims are only read after the signature holds.** Trusting an unverified payload is
+         precisely the mistake the section is about, so the code must not make it.
+       - **The token carries no `exp`.** An expiry would break the puzzle silently at some future
+         date with nobody watching. Asserted in the tests, because it is the kind of thing that
+         bites long after anyone remembers why.
+       - **The joke survives for everyone.** `sudo hire taha` still gives the playful denial when
+         locked; it gains a second ending rather than losing the first.
+       - **The unlock persists** to localStorage, unlike the sandbox's drafts — a draft is an
+         unfinished attempt, this is earned progress, and taking it away would mean solving the
+         same puzzle twice. It doubles as the Phase 5 achievement flag and the Phase 4 "access"
+         residue. Read as untrusted, like every stored value here.
+       - **`src/data/secret.ts` stays dependency-free** — data, not behaviour. It must not import
+         from `src/islands/`; that inverts the layering and breaks Node's type-stripping loader,
+         which will not resolve the extensionless relative import the bundler accepts.
     3. **The control surface.** `theme <name>`, `set <path> <value>`, `reset`, `open <section>` —
        one line doing what several clicks do, driving the _same state_ as the source view rather
        than duplicating it. This is plumbing rather than excitement; it is built because it links
@@ -414,8 +436,9 @@ taha` from a one-line joke into something that can actually be **earned**. An
     `GET /taha` part config document. **Removed at Taha's request.**
     What stays is a single top-level `undocumented: ["sudo hire taha"]`, which was always the
     better half: a secret leaking through an API response beats a secret nobody finds. It is
-    honest, because the command genuinely works, and it is now the **only** place the command is
-    written down — `help` says "not everything is listed" and nothing more.
+    honest, because the command genuinely works, and for a visitor who has not solved the unlock
+    chain it is the **only** place the command is written down — `help` says "not everything is
+    listed" and nothing more, until the `sudo` scope is earned and it reveals the command itself.
 
 ### Achievements — DEFERRED, do not design the list yet
 

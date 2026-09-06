@@ -11,6 +11,18 @@ import SourceView from '../components/SourceView.astro';
 import TerminalLoader from '../components/TerminalLoader.astro';
 import { site } from '../data/site';
 import { themeCss } from '../data/themes';
+import { PUBLIC_SIGNING_KEY, TOKEN_PAYLOAD } from '../data/secret';
+import { signHs256 } from '../islands/terminal/tools';
+
+// Signed here, at build time, so the token in the comment below carries a real
+// HMAC that `auth` genuinely verifies — rather than a string pasted in and hoped
+// over. Astro frontmatter runs in Node, whose `crypto.subtle` is the same API
+// the browser verifies with, so one implementation covers both ends.
+//
+// This import is frontmatter-only, so `tools.ts` is not pulled into the client
+// bundle by it — the terminal chunk still loads it on demand and the recruiter
+// path pays nothing. Asserted by the bundle check, not assumed.
+const token = await signHs256(TOKEN_PAYLOAD, PUBLIC_SIGNING_KEY);
 
 interface Props {
   title: string;
@@ -119,5 +131,24 @@ const OG_IMAGE_ALT = `${site.name} — ${site.role}. ${site.pitch.lead}.`;
       <span class="when-off sr-only">View source data</span>
       <span class="when-on sr-only">Back to the site</span>
     </label>
+
+    {
+      /* The one thing on this site that is only findable by reading the source.
+        It is a genuine HS256 JWT, signed at build time, and the terminal really
+        does verify the signature before granting anything — see
+        src/data/secret.ts for why that is a joke rather than a security claim.
+
+        Written through set:html because Astro strips comments from templates;
+        this has to survive into the shipped HTML, which is the entire point.
+        It is also the only comment in the output, so it does not hide in a
+        crowd — the puzzle is noticing that view-source is worth doing at all. */
+    }
+    <Fragment
+      set:html={`<!--
+  Nothing here is secret. The key that signs this ships to the browser as well.
+
+  ${token}
+-->`}
+    />
   </body>
 </html>
