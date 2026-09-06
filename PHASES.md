@@ -123,9 +123,13 @@ reveals it. Its editable-values tier is Phase 3.5 below.
 
 ---
 
-## Phase 3 — The API Simulation + easter eggs
+## Phase 3 — The API Simulation (REMOVED) + easter eggs
 
-**Goal:** the discovery layer, built around the API Simulation as the spine.
+**The API Simulation was built in full and then removed.** Everything below is kept as a record
+of what existed and why it did not work — see Phase 3.6 for what replaced it, and CLAUDE.md for
+the diagnosis. The easter eggs from step 6 (the hidden terminal command and the 404) survive.
+
+**Goal at the time:** the discovery layer, built around the API Simulation as the spine.
 
 **Achievements are deferred to Phase 5** — see CLAUDE.md. The list is not designed yet and will
 be derived from the finished site. Build the _unlock moments_ (crash, bug icon, each stage
@@ -461,43 +465,60 @@ Non-negotiables:
 
 ---
 
-## Checkpoint — cut the API Simulation back
+## Phase 3.6 — The three pillars
 
-**Runs after Phase 3.5 and before Phase 4.**
+**Resolves the checkpoint that used to sit here.** The question was whether to cut the API
+Simulation back; the answer, reached with Taha, was to **remove it** and to settle what the site's
+interactive layer actually consists of. Three pillars, deliberately three different _kinds_ of
+thing:
 
-**The simulation is finished and it is too big. Do not start Phase 4 until this is resolved.**
-Taha's own words after stage 5 landed: _"i myself am not understanding the API endpoint part, how
-will others understand it"_ — the person who commissioned it cannot follow it, so a recruiter
-certainly cannot.
+| Pillar                 | What it demonstrates              | Residue it leaves  |
+| ---------------------- | --------------------------------- | ------------------ |
+| **Permission Sandbox** | engineering depth, his speciality | a config you built |
+| **Terminal**           | a tool, and a place with secrets  | history and access |
+| **Customization**      | the portfolio becomes yours       | your vibe          |
 
-The mechanics are not the problem; the legibility is. Every step was verified for "is this
-technically honest" and none for "can a person follow this". The diagnosis, recorded so it is not
-re-derived:
+Those three residues are what Phase 4 remembers a returning visitor by, and what the Phase 5
+achievement list gets derived from. Do not design achievements here.
 
-- **The visitor stops being the one doing it.** Stage 1 is broken by hand and feels caused.
-  From stage 2 on you press "run exploit" and watch numbers, because those attacks genuinely
-  require machine timing. You become the audience for your own game.
-- **There is no sense of place.** Nothing ever states which stage you are on, how many there are,
-  or what is protecting the endpoint right now. It has to be reconstructed from a chain of words
-  and six counters.
-- **"Say nothing up front" got over-applied.** That rule exists to protect the _first_ discovery.
-  Applied forever it means the game still refuses to explain itself after the visitor has crashed
-  it and clearly opted in — which is obscurity, not mystery.
-- **Stage 4 depends on the multi-identity idea**, the hardest thing here to feel. Eight callers
-  each obeying their own limit cannot be experienced, only reported.
+**Build order is fixed, and each pillar is planned separately before any of it is written.** They
+are independent — do not start two at once, and do not scaffold ahead.
 
-**The leading proposal** (not yet decided — revisit with Taha): cut the _visitor's_ path to three
-stages, ending at the cache, and keep the full engine in the repo. CLAUDE.md already holds that
-the backend credibility comes from the code rather than a running system, and the queue,
-backpressure and breaker read well to an engineer who opens the source — which is the reader they
-were always for. A recruiter was never going to reach stage 5. Pair the cut with a persistent
-"where am I" line and with un-hiding the toolkit after the first crash, since three stages still
-needs to say where you are.
+### 3.6a — The Permission Sandbox
 
-Also open, and worth deciding at the same time: **whether the section deserves this much of the
-page at all.** It sits between Stack and Contact on a deliberately minimal portfolio and is the
-largest thing on it even at three stages. A version that keeps only the crash and one fix, with
-all remaining depth in the repo, is a legitimate outcome.
+Replaces the API Simulation, which is deleted rather than left unreachable. See CLAUDE.md for the
+full spec and for why the old shape failed. One screen, no stages, no win state; a real DOM-free
+policy engine underneath, testable in Node.
+
+### 3.6b — Terminal: real tools
+
+`jwt <token>` decoding locally, plus `hash`, `uuid`, `base64`. The bar is that an engineer can use
+the site to get actual work done.
+
+### 3.6c — Terminal: secrets worth finding
+
+A small challenge chain with locked commands and a token findable elsewhere on the site. Makes
+`sudo hire taha` earnable instead of a one-line joke.
+
+### 3.6d — Terminal: the control surface
+
+`theme`, `set`, `reset`, `open` — driving the same state as the source view. Plumbing that links
+the pillars; built last of the three terminal pieces because it is the least exciting on its own.
+
+### 3.6e — Customization: generated palettes
+
+10–14 hues generated through the existing three-seed `color-mix()` derivation, each
+contrast-validated at build time. Answers "four is not enough" without reintroducing the picker.
+
+### 3.6f — Customization: vibes
+
+Presets that change palette **plus** typography **plus** density **plus** border treatment — four
+or five named identities, each internally coherent. Still zero JS.
+
+**Parked, not cut:** reordering and hiding sections. Revisit after 3.6f.
+
+**Decided against:** a share link that encodes edited _content_ — it is a defacement vector aimed
+at Taha personally. Palette-only would be harmless.
 
 ---
 

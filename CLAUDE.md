@@ -195,130 +195,74 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
       filter above and worked, but he did not want them. Do not rebuild either without an
       explicit instruction. `perf` read real Navigation/Resource Timing numbers; `curl /taha`
       printed the machine view as an HTTP response.
-    - **`get` / `set` / `theme` / `reset` — Phase 3.5.** The payoff. Once the JSON viewer is
-      editable, these drive the _same state_, so editing a value in the viewer shows up in `get`,
-      and `theme #ff6b6b` recolours the site and the viewer together. That is what stops the
-      terminal being a third way to read the page.
+  - **What the terminal is actually for, decided after review.** Shown to a friend, his first
+    question was "what can be done through this terminal?" — and the only honest answer was "you
+    can read the same data in another format". That is a failed feature. The fix is not more
+    commands; it is commands that **do** rather than **print**. `perf` and `curl` both printed,
+    which is exactly why they were boring. Three things are being built, **in this order**:
+    1. **Real tools.** `jwt <token>` decodes a JWT locally — header, claims, expiry — plus
+       `hash`, `uuid`, `base64`. Nothing is sent anywhere; these are real algorithms running in
+       the browser. An engineer who decodes a token here has _used the site to get work done_,
+       which is the difference between a portfolio you look at and one you bookmark. Perfectly
+       on-brand for an engineer whose subject is auth.
+    2. **Secrets worth finding.** A small challenge chain: some commands are locked and say what
+       is missing without saying how to get it, and the token that unlocks them is findable
+       elsewhere on the site — decoded with `jwt` to read the flag. This is what turns `sudo hire
+taha` from a one-line joke into something that can actually be **earned**. An
+       auth-flavoured challenge on an auth engineer's site is the point, not a coincidence.
+    3. **The control surface.** `theme <name>`, `set <path> <value>`, `reset`, `open <section>` —
+       one line doing what several clicks do, driving the _same state_ as the source view rather
+       than duplicating it. This is plumbing rather than excitement; it is built because it links
+       the pillars together, not because it is the draw.
     - **`whoami` — Phase 4.** Visitor id, first vs returning, what has been discovered.
-  - Not building: autocomplete, a fake filesystem, tabs, split panes, a second mini-game (the API
-    Simulation is the game). It is a personality feature wearing a terminal's clothes, not an
-    emulator.
+  - Not building: autocomplete, a fake filesystem, tabs, split panes. It is a personality feature
+    wearing a terminal's clothes, not an emulator.
 
-- **The API Simulation** — the first of the site's two headline interactions, and the one that
-  demonstrates engineering depth. It replaces what
-  would otherwise be three separate features (an API playground, a system-status panel, and a
-  standalone mini-game) with one unified, narrative mechanic. Entirely client-side/simulated —
-  no real backend calls, no real crash, no real risk — which keeps it fast and simple to build.
+- **The Permission Sandbox** — the interaction that demonstrates engineering depth, and the
+  replacement for the API Simulation (removed; see below). Entirely client-side, no backend.
 
-  **Core loop:** a minimal fetch button plus a small, understated load indicator (the load
-  gauge doubles as the "system status" visualization — no separate status panel needed).
-  Clicking fetches; a visible load number climbs. Spam it past a threshold and the simulated
-  "server" crashes (a short, purposeful state change — not a looping animation).
+  **Why this and not the thing it replaces.** The API Simulation was a _curriculum_: five stages
+  in a fixed order where the right move was always "press the one button that just appeared". The
+  visitor stopped being the person doing things after stage 1, and its subject — load and failure
+  — is inherently invisible, so it had to be narrated in six counters and still did not land.
+  Taha could not follow it himself. The sandbox is the opposite shape on every axis: **one screen,
+  one idea you can see, no progression, and you are always the one moving.**
 
-  **Say nothing up front.** The section is a heading, a button and some numbers. No copy naming
-  rate limiting, caching, queueing or circuit breaking — that is the whole game, and printing it
-  above the button hands it over before the visitor has pressed anything. They should wonder what
-  it is, press it, and find out. Explanations arrive only after a crash, and stay terse.
+  **The shape:** a small organisation — a handful of roles, a handful of resources. The visitor
+  picks who they are, then tries to do things. Every answer is immediate and every _denial names
+  the rule that produced it_. Permissions can be flipped, and the consequences ripple: grant one
+  thing and watch what else becomes possible.
 
-  **Plain words carry the meaning; jargon rides along as a tag.** A recruiter must be able to
-  follow what just happened without a backend background, and the earlier build failed that —
-  "unbounded concurrency", "cap requests per window", "0 / 4 in flight" and a bare `503` explain
-  nothing to someone who does not already know. The rule is not to remove the technical terms,
-  which are half the point of the section, but to stop them being the only label:
-  - Every explanation — postmortems, fix blurbs, defect descriptions, exploit instructions — is
-    written in language that needs no background. Say what happens, not what it is called.
-  - The real name still appears, dimmed and secondary: a small tag beside the plain title, a
-    status code after the plain word. An engineer sees `down · 503` and `cache miss`; everyone
-    else reads the sentence and skips them.
-  - A blurb that only restates the name in more jargon is not a blurb. "Cap requests per window"
-    tells you nothing you did not get from "rate limit".
-  - Names in the middleware chain stay technical and unqualified — `rate limit → cache → queue →
-breaker` is the thing the visitor built, and it should read like a real stack.
+  Rules for it:
+  - **It is his actual subject.** `RBAC across 840+ endpoints` is already a proof chip. This is
+    the one part of the site where the interactive layer and the résumé are the same claim.
+  - **Legible without a backend background.** "Can this person do this? No, and here is why" needs
+    no explaining. The plain-words rule from the old section still applies in full: plain language
+    carries the meaning, the real term rides along as a dim tag.
+  - **No stages, no win state.** It is a sandbox. Nothing unlocks in sequence, so nothing can be
+    ground through or get boring in a fixed order. The good moments are _discoveries_ — that a
+    deny always beats an allow, or that a particular combination quietly grants more than it looks
+    like it does.
+  - **A real policy engine**, DOM-free and testable in Node without a browser, the same way the
+    old engine was. That is where the engineering credibility lives, and it is what an engineer
+    reading the repo will actually look at.
+  - **It leaves a residue.** The visitor ends up with a configuration they built. That is what
+    Phase 4 has to remember them by, and it is a large part of why this shape was chosen. The
+    policy the visitor configures **persists** to localStorage; this is progress, not content.
+  - **A fictional workspace, not this site.** Projects, an invoice, an API key, a member list.
+    Making the resources _this site_ — "who can edit the hero?" — is cuter but risks implying the
+    permissions are real, and tangles this pillar into the customization one. Decided: fictional.
+  - **Smaller than the thing it replaces.** Roughly half the vertical space the API Simulation
+    took. It is legible rather than mysterious, so it does not need room to unfold.
+  - **No "say nothing up front" here.** That rule cost the API Simulation dearly. A recruiter
+    should understand this within about five seconds: a heading, a role selector, and a list of
+    plain sentences. The depth is available, not hidden.
 
-  **The crash must be reachable by hand.** Tune it by measuring time-to-crash across sustained
-  click rates, not by feel: casual clicking (up to ~3/second) survives indefinitely, deliberate
-  mashing (4+/second) falls over in a second or two. An early build survived 15 clicks/second,
-  which meant only a script could ever trigger it — the centerpiece was unreachable.
-
-  **Presses made before the island loads still count.** The section is static HTML until the
-  first click, and the whole interaction is mashing, so the loader records every press while the
-  chunk downloads and replays them with their real spacing. Losing them makes the first burst
-  feel broken.
-
-  **Stage progression (each stage breaks a different way — not just "click faster"):**
-  1. **No protection.** Spam past the threshold → crash. This is the moment that reveals the
-     hidden bug icon (see below). Fix offered: rate limiting.
-  2. **Naive rate limiting.** Fixed requests per window. Broken by an attack that bursts right
-     as the window resets, or spoofs multiple identities. Fix offered: caching.
-  3. **Caching added.** Repeat requests get served from cache. Broken by a flood of unique
-     (cache-missing) requests. Fix offered: a request queue with backpressure.
-  4. **Queue added.** Enqueuing faster than the queue drains overflows it. Fix offered: a
-     circuit breaker / graceful degradation.
-  5. **Graceful degradation reached.** Under extreme load the "API" now returns fast
-     cached/fallback responses or a polite 429 instead of dying. This is the capstone state —
-     framed as "you built a production-grade API," not "it's now unbreakable."
-
-  **How fixes reach the visitor.** Attacks have a home (the bug icon); fixes need one too, or the
-  loop only works in one direction. Fixes appear **inline at the point of failure** — after a
-  crash, one button next to the postmortem line, with a one-line rationale (`+ rate limit — cap
-requests per window`). No second panel, no discovery required: it shows up exactly when it has
-  been earned, and the rationale teaches the concept without lecturing.
-
-  Applied fixes then render as a **middleware chain** above the endpoint —
-  `rate limit → cache → queue → breaker` — which starts empty and grows. That chain is the
-  progress indicator, and it is what makes the capstone land: the visitor can see the thing they
-  built. The two sides stay separate on purpose: the bug icon answers "how do I break it now",
-  the chain answers "what did I just learn".
-
-  **Every defence must actually defeat the attack it answers.** Sounds obvious; it is easy to get
-  wrong. The first build set the rate limit to 5 per window against a server capacity of 4, so a
-  client obeying the limit perfectly could still kill it — applying the fix changed nothing. A
-  limit must sit below capacity, and each new defence needs a test proving the _previous_ stage'''s
-  attack now fails against it.
-
-  **State rules:** progress persists to localStorage (a five-stage journey must survive a
-  reload). The visitor applies each fix themselves — nothing is automatic. A **reset wipes
-  everything** back to stage 1, and appears only once there is something to reset.
-
-  **The hidden bug mechanic:** after the first crash (stage 1), a small bug icon appears —
-  tucked at the edge of the fetch button or an adjacent input, low-opacity, easy to miss on a
-  glance, similar treatment to the achievements icon (see below), but only appears post-crash.
-  Clicking it "arms" the visitor with an attack toolkit: a small panel listing specific attacks
-  (burst-after-cooldown / multi-identity flood, cache-busting flood, queue flood, etc.), each
-  mapped to the stage progression above. As defenses are added, older attacks in the panel show
-  as visibly "patched" (grayed out, e.g. "no longer works — cache added") rather than
-  disappearing — this turns the panel into a lightweight changelog of the API's hardening and
-  gives the whole thing a sense of progress even before you reach the end state.
-
-  **The icon is load-bearing, not a bonus.** Once the rate limiter is in, mashing the button
-  cannot get through at any speed — the only way forward is the timed attack the panel arms you
-  with. So a visitor who never spots the icon hits a dead end. It stays faint for anyone who
-  finds it on their own, but it gets **easier to see for someone visibly attacking and getting
-  nowhere**: two opacity steps, at 10 and 24 requests turned away since the last fix, cleared by
-  a successful breach. A one-time step change with a short transition — never a loop, never an
-  idle pulse. Do not "fix" the dead end by making the icon permanently obvious; that spends the
-  discovery for everyone to rescue a few.
-
-  The panel only ever lists stages the visitor has reached — the open defect plus the ones
-  already patched. Listing a weakness in a defence they have not built yet would hand over the
-  rest of the game.
-
-  This system fully absorbs the old API Playground, System Status panel, and "Fix the Server"
-  mini-game concepts. Do not build those as separate features alongside this.
-
-  **It was built to this spec in full, and the result is too big — a cut-back is pending.** All
-  five stages exist and every defence provably defeats the attack it answers, but the whole is
-  harder to follow than any part of it, and Taha could not follow it himself. Treat the stage
-  list above as _what was built_, not as settled scope: the visitor-facing path is expected to
-  shrink, most likely to three stages ending at the cache, with the remaining engine kept in the
-  repo for the engineer who opens the source. See the checkpoint between Phase 3.5 and Phase 4 in
-  `PHASES.md` for the full diagnosis. **Do not extend this section further** — no new stages, no
-  new attacks, no new counters — until that cut has been made.
-
-  One rule already learned from it, which applies beyond this section: **"say nothing up front"
-  protects the first discovery, not every moment after it.** Once a visitor has crashed the
-  endpoint they have opted in, and continuing to withhold the shape of the thing stops being
-  mystery and becomes obscurity.
+  **The API Simulation is removed.** Rate limiting, caching, queue-with-backpressure and the
+  circuit breaker were built in full and every defence provably defeated the attack it answered —
+  but the whole was harder to follow than any part of it. Its engine is deleted rather than left
+  unreachable: dead code is clutter in a repo that _is_ the portfolio. Do not rebuild it, and do
+  not reintroduce a staged progression anywhere else.
 
 - **Source view** — the site's second representation. Every piece of core content also exists as
   a machine-readable **HTTP/JSON API response** (`GET /taha` → `200 OK` → a JSON body), and a
@@ -329,14 +273,16 @@ requests per window`). No second panel, no discovery required: it shows up exact
   **The site has two headline interactions, decided deliberately.** This replaces the earlier
   "single centerpiece" rule, which the source view had already outgrown by accumulation:
 
-  1. **The API Simulation** — demonstrates engineering depth: rate limiting, caching, queueing,
-     circuit breaking. This is the evidence that Taha can build backends.
+  1. **The Permission Sandbox** — demonstrates engineering depth in Taha's actual specialty.
   2. **The source view** — demonstrates the "the portfolio _is_ the project" idea, and invites a
      visiting developer to make the site their own.
+  3. **The terminal** — the power-user surface: a real tool, and the place with secrets in it.
 
-  They are different kinds of thing, which is why two works here. Neither may absorb the other,
-  and the API Simulation is still the one a recruiter should be able to understand without
-  reading code.
+  These are the site's **three pillars**, and they are deliberately three different _kinds_ of
+  thing. None may absorb another. Each leaves a different residue — a configuration you built,
+  a version you made yours, a history of what you found — which is what Phase 4 remembers you by,
+  and what the Phase 5 achievement list will be derived from. The sandbox is still the one a
+  recruiter should be able to understand without reading code.
 
   Even with two, the source view has a boundary. Still out: multiple formats to choose from,
   syntax-highlighting _themes_ (one restrained token scheme is fine), export, and raw-text JSON
@@ -374,9 +320,25 @@ requests per window`). No second panel, no discovery required: it shows up exact
       accessibility was thought about.
     - Presets need **zero JS** (`html:has(#theme-x:checked)` reaches `:root`). **Built**: four
       dark presets, each setting only the three seeds. A custom colour picker was built alongside
-      them and **removed at Taha's request** — it needed a script, being the one thing here CSS
-      cannot do. The source view therefore ships no JavaScript at all. Do not rebuild the picker
-      without an explicit instruction.
+      them and **removed at Taha's request** — arbitrary colours are how a coherent design system
+      turns wonky, and it needed a script. **Do not rebuild the picker.**
+    - **Four presets is not enough, and the answer is more axes and more generated options — not
+      a colour wheel.** Two things are being built, **in this order**:
+      1. **Generated palettes.** A palette is already _one hue plus a rule_, since nine tokens
+         derive from three seeds by `color-mix()`. So offer a swatch row of 10–14 hues, each
+         generated through that system and contrast-validated at build time. Many more options
+         with zero risk of the wonkiness the picker caused, because the visitor chooses a _hue_
+         and the system does the rest.
+      2. **Vibes, not palettes.** A preset should change the site's whole character, not three
+         colours: palette **plus** typography **plus** density **plus** border treatment. Four or
+         five named identities, each internally coherent. Still zero JS — the same radio group
+         setting more tokens. This is what makes "the vibe can be changed" literally true.
+    - **Reordering and hiding sections** — letting a visitor rearrange the page rather than just
+      recolour it — is a real third axis and the deepest form of "make it yours". Parked, not
+      cut; revisit after the two above are in.
+    - **A share link is not being built for content.** The state would fit in a URL fragment with
+      no backend, but a link that makes Taha's portfolio say anything, shareable, is a defacement
+      vector aimed at him personally. A palette-only share link is harmless; content is not.
     - Controls live in the source view's header strip, **not in the JSON body** — the body is
       content; colours are viewer settings. Putting `theme.accent` in the payload would quietly
       turn `GET /taha` from a profile response into a config document.
