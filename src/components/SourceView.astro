@@ -1,42 +1,52 @@
 ---
 // The machine view, revealed when the bottom-right toggle is on.
 //
-// Same data as the human view and the background — all three read from `site`.
-// Nothing here is retyped content.
+// Same data as the human view — both read from `site`. Nothing is retyped.
 //
-// Zero JS throughout: the reveal is a checkbox in Base.astro plus sibling
-// selectors in global.css; the font-size control is radios plus `:checked ~`.
+// The reveal is a checkbox in Base.astro plus sibling selectors in global.css,
+// and the palette presets are a radio group that `html:has(#theme-x:checked)`
+// carries up to `:root`. Both need no JavaScript at all. A custom colour picker
+// briefly lived here too and was removed at Taha's request.
 //
-// This is deliberately NOT a second centerpiece (CLAUDE.md). It collapses and
-// it resizes. It does not edit — that is Tier 1, Phase 3.5.
+// Editing is the exception, and the only script this component loads: values
+// are editable in place and arrays can grow and shrink, live-bound to the human
+// view. It waits for the view to actually open — a recruiter who never flips the
+// toggle pays for one listener and nothing else. See src/islands/edit/mount.ts.
 import { site } from '../data/site';
 import { machineRequestLine, machineStatusLines } from '../data/machine';
+import { THEMES, DEFAULT_THEME, contrast, readout } from '../data/themes';
 import JsonNode from './JsonNode.astro';
-
-// Scoped to this JSON view only — never a site-wide type control. The small
-// end of the range is for fitting more structure on screen, not for reading.
-const SIZES = [8, 9, 10, 11] as const;
-const DEFAULT_SIZE = 11;
 
 // Built here rather than inline in the template: a `.join('\n')` inside the
 // markup is easy to mangle, and the frontmatter is where logic belongs.
 const framing = [machineRequestLine, '', ...machineStatusLines].join('\n');
+
+// The contrast readout is mandatory, not decorative (CLAUDE.md): a palette
+// control on a site with a hard AA floor has to show its work. Presets are
+// known at build time, so this costs nothing at runtime.
+const readouts = THEMES.map((theme) => ({
+  id: theme.id,
+  text: readout([
+    ['text', contrast(theme.fg, theme.bg)],
+    ['accent', contrast(theme.accent, theme.bg)],
+  ]),
+}));
 ---
 
 <div class="source-view gutter">
   {
-    /* The radios must be siblings of `.tree` for `~` to reach it, so they sit
-      here rather than beside their labels. `for`/`id` still pairs them up, and
-      the labels render up in the header where they belong. */
+    /* The radios sit here rather than beside their labels so `~` can reach the
+      header from them. `for`/`id` still pairs them up, and the labels render up
+      in the control strip where they belong. */
   }
   {
-    SIZES.map((px) => (
+    THEMES.map((theme) => (
       <input
         type="radio"
-        name="json-size"
-        id={`json-size-${px}`}
+        name="theme"
+        id={`theme-${theme.id}`}
         class="sr-only"
-        checked={px === DEFAULT_SIZE}
+        checked={theme.id === DEFAULT_THEME.id}
       />
     ))
   }
@@ -44,8 +54,31 @@ const framing = [machineRequestLine, '', ...machineStatusLines].join('\n');
   <div class="head">
     <pre class="framing">{framing}</pre>
 
-    <div class="sizes" role="group" aria-label="JSON font size">
-      {SIZES.map((px) => <label for={`json-size-${px}`}>{px}</label>)}
+    {
+      /* Colours are viewer settings, so the control lives up here in the header
+        and never in the JSON body — putting `theme.accent` in the payload would
+        quietly turn GET /taha from a profile response into a config document. */
+    }
+    <div class="controls">
+      <div class="row">
+        <span class="ctl">palette</span>
+        <div class="choices" role="group" aria-label="Palette">
+          {THEMES.map((theme) => <label for={`theme-${theme.id}`}>{theme.label}</label>)}
+        </div>
+      </div>
+
+      {
+        /* Stays hidden until there is something to reset — a control that does
+          nothing is noise, and this strip is meant to be quiet. */
+      }
+      <div class="row" data-edit-row hidden>
+        <span class="ctl">edits</span>
+        <button type="button" class="edit-reset" data-edit-reset>reset</button>
+      </div>
+
+      <p class="contrast">
+        {readouts.map((r) => <span class={`ct ct-${r.id}`}>{r.text}</span>)}
+      </p>
     </div>
   </div>
 
@@ -53,6 +86,22 @@ const framing = [machineRequestLine, '', ...machineStatusLines].join('\n');
     <JsonNode value={site} />
   </div>
 </div>
+
+<script>
+  // Editing is the one thing in here that genuinely cannot be done in CSS, so
+  // it is also the only script the source view loads — and it waits until the
+  // view is actually opened. A recruiter who never flips the toggle pays for
+  // the listener below and nothing else.
+  const toggle = document.getElementById('source-view');
+  const view = document.querySelector<HTMLElement>('.source-view');
+  if (toggle instanceof HTMLInputElement && view) {
+    let loading: Promise<void> | null = null;
+    toggle.addEventListener('change', () => {
+      if (!toggle.checked) return;
+      loading ??= import('../islands/edit/mount').then((m) => m.mountEditor(view));
+    });
+  }
+</script>
 
 <style>
   .source-view {
@@ -81,17 +130,38 @@ const framing = [machineRequestLine, '', ...machineStatusLines].join('\n');
     white-space: pre-wrap;
   }
 
-  .sizes {
+  .controls {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .ctl {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-fg-subtle);
+  }
+
+  .choices {
     display: flex;
     gap: 0.25rem;
   }
 
-  .sizes label {
+  .choices label {
     display: inline-flex;
     min-width: 2.25rem;
     min-height: 2.25rem;
     align-items: center;
     justify-content: center;
+    padding-inline: 0.6rem;
     border: 1px solid var(--color-border);
     border-radius: 2px;
     font-size: 11px;
@@ -102,38 +172,71 @@ const framing = [machineRequestLine, '', ...machineStatusLines].join('\n');
       border-color 150ms ease;
   }
 
-  .sizes label:hover {
+  .choices label:hover {
     color: var(--color-fg);
   }
 
-  /* Active state + focus ring, reaching forward from the hidden radio. */
-  #json-size-8:checked ~ .head label[for='json-size-8'],
-  #json-size-9:checked ~ .head label[for='json-size-9'],
-  #json-size-10:checked ~ .head label[for='json-size-10'],
-  #json-size-11:checked ~ .head label[for='json-size-11'] {
+  .edit-reset {
+    border: 0;
+    background: none;
+    padding: 0;
+    font-family: inherit;
+    font-size: 11px;
+    color: var(--color-fg-muted);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--color-border-strong);
+    transition: color 150ms ease;
+  }
+
+  .edit-reset:hover {
+    color: var(--color-fg);
+  }
+
+  .contrast {
+    margin: 0.25rem 0 0;
+    font-size: 10px;
+    color: var(--color-fg-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Only the selected palette's figures are shown. */
+  .ct {
+    display: none;
+  }
+
+  /* Active state, focus ring and readout, all reaching forward from the hidden
+     radio. Written out per theme because a sibling combinator cannot be
+     parameterised — the alternative is a script, which is the thing this whole
+     control exists to avoid. */
+  #theme-default:checked ~ .head label[for='theme-default'],
+  #theme-amber:checked ~ .head label[for='theme-amber'],
+  #theme-azure:checked ~ .head label[for='theme-azure'],
+  #theme-violet:checked ~ .head label[for='theme-violet'] {
     color: var(--color-accent);
     border-color: var(--color-accent-dim);
   }
 
-  #json-size-8:focus-visible ~ .head label[for='json-size-8'],
-  #json-size-9:focus-visible ~ .head label[for='json-size-9'],
-  #json-size-10:focus-visible ~ .head label[for='json-size-10'],
-  #json-size-11:focus-visible ~ .head label[for='json-size-11'] {
+  #theme-default:focus-visible ~ .head label[for='theme-default'],
+  #theme-amber:focus-visible ~ .head label[for='theme-amber'],
+  #theme-azure:focus-visible ~ .head label[for='theme-azure'],
+  #theme-violet:focus-visible ~ .head label[for='theme-violet'] {
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
   }
 
-  /* The whole point of the control: the size applies to the JSON only. */
-  #json-size-8:checked ~ .tree {
-    font-size: 8px;
+  #theme-default:checked ~ .head .ct-default,
+  #theme-amber:checked ~ .head .ct-amber,
+  #theme-azure:checked ~ .head .ct-azure,
+  #theme-violet:checked ~ .head .ct-violet {
+    display: inline;
   }
-  #json-size-9:checked ~ .tree {
-    font-size: 9px;
-  }
-  #json-size-10:checked ~ .tree {
-    font-size: 10px;
-  }
-  #json-size-11:checked ~ .tree {
+
+  /* Fixed, not adjustable. The size control that used to sit here was removed:
+     11px is the size this is designed at, and it is scoped to the JSON so it was
+     never a site-wide type control either way. */
+  .tree {
     font-size: 11px;
   }
 </style>

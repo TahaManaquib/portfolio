@@ -10,6 +10,7 @@ import interWoff2 from '@fontsource-variable/inter/files/inter-latin-wght-normal
 import SourceView from '../components/SourceView.astro';
 import TerminalLoader from '../components/TerminalLoader.astro';
 import { site } from '../data/site';
+import { themeCss } from '../data/themes';
 
 interface Props {
   title: string;
@@ -19,6 +20,11 @@ interface Props {
 }
 
 const { title, description, path = '/' } = Astro.props;
+
+// Only bind when this page really is showing the site's own metadata. The 404
+// passes its own title, and editing `meta.title` should not rewrite that.
+const titlePath = title === site.meta.title ? 'meta.title' : undefined;
+const descriptionPath = description === site.meta.description ? 'meta.description' : undefined;
 const canonical = new URL(path, Astro.site);
 
 // Social scrapers do not resolve relative URLs, so og:image must be absolute.
@@ -34,8 +40,13 @@ const OG_IMAGE_ALT = `${site.name} — ${site.role}. ${site.pitch.lead}.`;
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>{title}</title>
-    <meta name="description" content={description} />
+    {
+      /* `<title>` binds by text like anything else — setting its textContent is
+        what changes the browser tab, which makes it the most visible edit on
+        the page that is not on the page. */
+    }
+    <title data-bind={titlePath}>{title}</title>
+    <meta name="description" content={description} data-bind-content={descriptionPath} />
     <link rel="canonical" href={canonical} />
 
     <link rel="preload" href={interWoff2} as="font" type="font/woff2" crossorigin />
@@ -52,8 +63,8 @@ const OG_IMAGE_ALT = `${site.name} — ${site.role}. ${site.pitch.lead}.`;
     }
     <meta property="og:type" content="profile" />
     <meta property="og:site_name" content={site.name} />
-    <meta property="og:title" content={title} />
-    <meta property="og:description" content={description} />
+    <meta property="og:title" content={title} data-bind-content={titlePath} />
+    <meta property="og:description" content={description} data-bind-content={descriptionPath} />
     <meta property="og:url" content={canonical} />
     <meta property="og:locale" content="en_US" />
     <meta property="og:image" content={ogImage} />
@@ -64,6 +75,14 @@ const OG_IMAGE_ALT = `${site.name} — ${site.role}. ${site.pitch.lead}.`;
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image:alt" content={OG_IMAGE_ALT} />
+
+    {
+      /* Palette presets. Generated from src/data/themes.ts so the hex values
+        exist once, and emitted unlayered so these rules beat Tailwind's
+        `@layer theme`. Each rule sets only the three seeds — every other token
+        is a color-mix() of them and follows without being mentioned. */
+    }
+    <style is:inline set:html={themeCss}></style>
 
     <slot name="head" />
   </head>

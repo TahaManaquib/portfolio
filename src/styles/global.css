@@ -44,26 +44,59 @@
   --color-transparent: transparent;
   --color-current: currentColor;
 
+  /* ---------------------------------------------------------------------
+     Three seeds, and everything else derived from them.
+
+     Only --color-bg, --color-fg and --color-accent are chosen. Every other
+     colour is a color-mix() of two of those, so the relationships live in code
+     rather than in a comment describing hex values someone has to keep in
+     sync. Two things fall out of that:
+
+       - The palette editor (Phase 3.5a) only ever needs three inputs.
+         Exposing all ten would guarantee incoherent results; deriving nine of
+         them means any three colours produce a coherent system.
+       - The derived values must stay runtime var()/color-mix(), never
+         precomputed, or overriding a seed would not move anything with it.
+
+     Mixed in oklab, not sRGB: sRGB interpolation of two saturated colours
+     travels through muddy intermediates, which is precisely what a derived
+     palette must not do for an arbitrary accent.
+
+     Percentages were fitted to the previous hand-picked palette rather than
+     guessed — every neutral lands within a few RGB units of what it replaced.
+     --------------------------------------------------------------------- */
+
   /* Ground + surfaces */
   --color-bg: #0b0c0e;
-  --color-surface: #111316;
+  --color-surface: color-mix(in oklab, var(--color-fg) 4%, var(--color-bg));
 
   /* Text system */
   --color-fg: #e6e7e9;
-  --color-fg-muted: #8b8f96;
-  /* NOT AA-safe for text: 3.1:1 on --color-bg, below the 4.5:1 floor. Use it
+  /* 6.0:1 on --color-bg. The dimmest colour real text may use. */
+  --color-fg-muted: color-mix(in oklab, var(--color-fg) 64%, var(--color-bg));
+  /* NOT AA-safe for text: 3.2:1 on --color-bg, below the 4.5:1 floor. Use it
      only for decorative marks (separators, rules, icons that repeat adjacent
-     text). Any real text belongs on --color-fg-muted (6.0:1) or brighter. */
-  --color-fg-subtle: #5c6068;
+     text). Any real text belongs on --color-fg-muted or brighter. */
+  --color-fg-subtle: color-mix(in oklab, var(--color-fg) 44%, var(--color-bg));
 
   /* Thin subtle borders */
-  --color-border: #1f2226;
-  --color-border-strong: #2b2f35;
+  --color-border: color-mix(in oklab, var(--color-fg) 13%, var(--color-bg));
+  --color-border-strong: color-mix(in oklab, var(--color-fg) 20%, var(--color-bg));
 
   /* Single accent — muted terminal green */
   --color-accent: #6ee7a8;
-  --color-accent-dim: #3fbf82;
-  --color-accent-faint: #132a20;
+  /* Decorative only: hover borders, gauge fills, never text. Mixing toward the
+     background is what makes it read as quieter, and it is also why it cannot
+     be trusted for text — measured across six accents, a red or blue seed
+     lands at 4.4:1 here even though the seed itself passes comfortably. */
+  --color-accent-dim: color-mix(in oklab, var(--color-accent) 78%, var(--color-bg));
+  /* The text-safe accent, for small type that must not be plain fg. Mixed
+     toward --color-fg-muted rather than the background, which makes it
+     self-correcting: both endpoints clear AA, so the result does too. A
+     deliberately weak accent measuring 3.98:1 still derives to 4.96:1 here —
+     better than the seed it came from. */
+  --color-accent-soft: color-mix(in oklab, var(--color-accent) 65%, var(--color-fg-muted));
+  --color-accent-faint: color-mix(in oklab, var(--color-accent) 15%, var(--color-bg));
 
   /* Typography */
   --font-sans:
@@ -637,7 +670,7 @@
   }
 
   .api-log-status {
-    color: var(--color-accent-dim);
+    color: var(--color-accent-soft);
   }
 
   .api-log-id,
@@ -648,7 +681,7 @@
   /* Marks a row answered from memory. The status is still 200, so the tag is
      what distinguishes "we did the work" from "we already had it". */
   .api-log-tag {
-    color: var(--color-accent-dim);
+    color: var(--color-accent-soft);
   }
 
   /* Time spent in the line is a cost, not a win — so it does not get the accent

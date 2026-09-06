@@ -16,9 +16,18 @@ interface Props {
   value: unknown;
   /** Controls the trailing comma. */
   last?: boolean;
+  /**
+   * Dotted path to this node from the root, e.g. `stack.primary.0.label`.
+   * It is what pairs a value in here with the element rendering it out in the
+   * human view — the same key on both sides of the two representations.
+   */
+  path?: string;
 }
 
-const { name, value, last = true } = Astro.props;
+const { name, value, last = true, path = '' } = Astro.props;
+
+const childPath = (key: string | undefined, index: number) =>
+  path ? `${path}.${key ?? index}` : `${key ?? index}`;
 
 const isArray = Array.isArray(value);
 const isObject = typeof value === 'object' && value !== null && !isArray;
@@ -62,7 +71,7 @@ const keyParts = name === undefined ? [] : [`"${name}"`];
 
 {
   isBranch && n > 0 && (
-    <details open class="node">
+    <details open class="node" data-path={path} data-kind={isArray ? 'array' : 'object'}>
       <summary class="row">
         {[
           ...keyParts.map((k) => <span class="tok-key">{k}</span>),
@@ -72,15 +81,17 @@ const keyParts = name === undefined ? [] : [`"${name}"`];
             {[
               <span class="tok-p">…{closeBrace}</span>,
               last ? null : <span class="tok-p">,</span>,
-              <span class="count">{countLabel}</span>,
+              <span class="count" data-count>
+                {countLabel}
+              </span>,
             ]}
           </span>,
         ]}
       </summary>
 
-      <div class="children">
+      <div class="children" data-children>
         {entries.map(([k, v], i) => (
-          <Astro.self name={k} value={v} last={i === n - 1} />
+          <Astro.self name={k} value={v} last={i === n - 1} path={childPath(k, i)} />
         ))}
       </div>
 
@@ -97,8 +108,19 @@ const keyParts = name === undefined ? [] : [`"${name}"`];
       {[
         ...keyParts.map((k) => <span class="tok-key">{k}</span>),
         name === undefined ? null : <span class="tok-p colon">:</span>,
-        <span class={tokenClass(value)}>{literal}</span>,
-        last ? null : <span class="tok-p">,</span>,
+        /* The quotes are punctuation, not content: splitting them out means an
+          edit cannot delete them and produce something that is not a string.
+          It is also what keeps the editable region exactly the value. */
+        ...(typeof value === 'string'
+          ? [
+              <span class="tok-str">"</span>,
+              <span class="tok-str tok-val" data-path={path}>
+                {value}
+              </span>,
+              <span class="tok-str">"</span>,
+            ]
+          : [<span class={tokenClass(value)}>{literal}</span>]),
+        last ? null : <span class="tok-p" data-comma set:text="," />,
       ]}
     </div>
   )
@@ -163,8 +185,60 @@ const keyParts = name === undefined ? [] : [`"${name}"`];
   }
   .tok-num,
   .tok-bool {
-    color: var(--color-accent-dim);
+    color: var(--color-accent-soft);
   }
+  /* Applied by the editor island, so a value only looks editable once it
+     actually is. Only values the page renders get it — editing a field nothing
+     displays would demonstrate nothing. */
+  .tok-val.is-editable {
+    border-bottom: 1px dotted var(--color-border-strong);
+    cursor: text;
+  }
+
+  .tok-val.is-editable:hover {
+    border-bottom-color: var(--color-accent-dim);
+  }
+
+  .tok-val.is-editable:focus {
+    outline: none;
+    background-color: var(--color-accent-faint);
+    border-bottom-color: var(--color-accent);
+  }
+
+  /* The add/remove controls, injected by the editor island. Sized for the
+     24x24 target floor while reading as punctuation rather than as buttons —
+     this is a JSON viewer, not a form.
+     `:global` is required: Astro scopes component styles by a data-astro-cid
+     attribute that these buttons never get, because they are created at runtime
+     rather than rendered here. Without it the rule silently does not apply and
+     the buttons collapse to 7x19. */
+  :global(.json-btn) {
+    display: inline-flex;
+    min-width: 1.5rem;
+    min-height: 1.5rem;
+    align-items: center;
+    justify-content: center;
+    margin-left: 0.75ch;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    background: none;
+    padding: 0;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: 1;
+    color: var(--color-fg-subtle);
+    cursor: pointer;
+    transition:
+      color 150ms ease,
+      border-color 150ms ease;
+  }
+
+  :global(.json-btn:hover),
+  :global(.json-btn:focus-visible) {
+    color: var(--color-accent);
+    border-color: var(--color-accent-dim);
+  }
+
   .tok-p {
     color: var(--color-fg-muted);
   }

@@ -20,19 +20,24 @@ const { primary, also } = site.stack;
 
   <dl class="mt-8 grid gap-y-6 sm:grid-cols-[9rem_1fr] sm:gap-x-10 sm:gap-y-5">
     {
-      primary.map(({ label, items }) => (
-        <>
-          <dt class="text-fg-muted font-mono text-xs tracking-wider uppercase sm:pt-0.5">
+      primary.map(({ label, items }, gi) => (
+        <div class="contents" data-bind-item={`stack.primary.${gi}`}>
+          <dt
+            class="text-fg-muted font-mono text-xs tracking-wider uppercase sm:pt-0.5"
+            data-bind={`stack.primary.${gi}.label`}
+          >
             {label}
           </dt>
           <dd class="m-0">
             <ul class="items flex flex-wrap gap-x-3 gap-y-1">
-              {items.map((item) => (
-                <li class="text-fg text-sm">{item}</li>
+              {items.map((item, ii) => (
+                <li class="text-fg text-sm" data-bind={`stack.primary.${gi}.items.${ii}`}>
+                  {item}
+                </li>
               ))}
             </ul>
           </dd>
-        </>
+        </div>
       ))
     }
   </dl>
@@ -42,7 +47,13 @@ const { primary, also } = site.stack;
       <dt class="text-fg-muted font-mono text-xs tracking-wider uppercase sm:pt-0.5">also</dt>
       <dd class="m-0">
         <ul class="items flex flex-wrap gap-x-3 gap-y-1">
-          {also.map((item) => <li class="text-fg-muted text-sm">{item}</li>)}
+          {
+            also.map((item, i) => (
+              <li class="text-fg-muted text-sm" data-bind={`stack.also.${i}`}>
+                {item}
+              </li>
+            ))
+          }
         </ul>
       </dd>
     </dl>

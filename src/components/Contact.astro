@@ -19,22 +19,26 @@ const isExternal = (href: string) => href.startsWith('http');
 
   <dl class="mt-8 grid gap-y-2 sm:grid-cols-[9rem_1fr] sm:gap-x-10 sm:gap-y-1">
     {
-      contact.map(({ label, value, href }) => (
-        <>
-          <dt class="text-fg-muted self-center font-mono text-xs tracking-wider uppercase">
+      contact.map(({ label, value, href }, i) => (
+        <div class="contents" data-bind-item={`contact.${i}`}>
+          <dt
+            class="text-fg-muted self-center font-mono text-xs tracking-wider uppercase"
+            data-bind={`contact.${i}.label`}
+          >
             {label}
           </dt>
           <dd class="m-0">
             <a
               href={href}
+              data-bind-href={`contact.${i}.href`}
               {...(isExternal(href) ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
               class="text-fg hover:text-accent decoration-border hover:decoration-accent-dim inline-flex min-h-11 items-center text-base underline underline-offset-4 transition-colors duration-150"
             >
-              {value}
+              <span data-bind={`contact.${i}.value`} set:text={value} />
               {isExternal(href) && <span class="sr-only">&nbsp;(opens in a new tab)</span>}
             </a>
           </dd>
-        </>
+        </div>
       ))
     }
   </dl>
