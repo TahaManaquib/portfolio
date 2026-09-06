@@ -158,8 +158,10 @@
 @layer base {
   html {
     scroll-behavior: smooth;
-    /* Anchor nav must not tuck section headings under the sticky nav. */
-    scroll-padding-top: 5rem;
+    /* Anchor nav must not tuck section headings under the sticky nav. The nav
+       is one row (57px) from 360px up, but wraps to two below that, so the
+       padding has to clear the taller case on the smallest screens. */
+    scroll-padding-top: 6.5rem;
     -webkit-text-size-adjust: 100%;
   }
 
@@ -506,5 +508,426 @@
 
   .term-input:focus {
     outline: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Permission sandbox.
+
+   Global rather than scoped because the markup exists twice: once as static
+   HTML in Access.astro (what ships, with answers computed at build time) and
+   once rendered by the Preact island (what takes over on first click). Scoped
+   styles would only reach the first, and the swap has to be invisible.
+   --------------------------------------------------------------------------- */
+@layer components {
+  .ax {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    max-width: 42rem;
+  }
+
+  .ax-roles {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .ax-you {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-fg-subtle);
+  }
+
+  .ax-choices {
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  /* Same chip language as the palette control, so the site has one way of
+     asking "pick one of these". */
+  .ax-role span {
+    display: inline-flex;
+    min-height: 2.25rem;
+    align-items: center;
+    padding-inline: 0.7rem;
+    border: 1px solid var(--color-border);
+    border-radius: 2px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-fg-muted);
+    cursor: pointer;
+    transition:
+      color 150ms ease,
+      border-color 150ms ease;
+  }
+
+  .ax-role span:hover {
+    color: var(--color-fg);
+  }
+
+  .ax-role input:checked + span {
+    color: var(--color-accent);
+    border-color: var(--color-accent-dim);
+  }
+
+  .ax-role input:focus-visible + span {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  .ax-action {
+    color: var(--color-fg);
+  }
+
+  .ax-verdict {
+    color: var(--color-fg-muted);
+  }
+
+  /* One accent, so a grant reads as the site's own colour and a refusal simply
+     drains — no red the palette does not have, and nothing that would break
+     under a recoloured theme. */
+  .ax-row.is-allowed .ax-verdict {
+    color: var(--color-accent-soft);
+  }
+
+  .ax-reason {
+    color: var(--color-fg-muted);
+    line-height: 1.5;
+  }
+
+  .ax-trace {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin: 0.15rem 0 0.5rem 0.4rem;
+    padding-left: 0.85rem;
+    border-left: 1px solid var(--color-border-strong);
+  }
+
+  .ax-trace pre {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    line-height: 1.6;
+    color: var(--color-fg-muted);
+    white-space: pre-wrap;
+  }
+
+  /* The jargon, dim and secondary — the row above already said it in English. */
+  .ax-term {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 0.1rem 0.4rem;
+    border: 1px solid var(--color-border);
+    border-radius: 2px;
+    color: var(--color-fg-muted);
+  }
+
+  @media (width <= 34rem) {
+    .ax-row {
+      grid-template-columns: minmax(0, 1fr) 5rem;
+    }
+
+    .ax-reason {
+      grid-column: 1 / -1;
+    }
+  }
+}
+
+/* --- Permission sandbox: policy toggles and findings ----------------------- */
+@layer components {
+  .ax-policy {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.75rem;
+  }
+
+  .ax-wrap {
+    flex-wrap: wrap;
+  }
+
+  /* Checkboxes wearing the same chip as the role radios — one visual language
+     for "pick", whether it is one of a set or several at once. */
+  .ax-toggle span {
+    display: inline-flex;
+    min-height: 1.9rem;
+    align-items: center;
+    padding-inline: 0.6rem;
+    border: 1px dashed var(--color-border-strong);
+    border-radius: 2px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-fg-muted);
+    cursor: pointer;
+    transition:
+      color 150ms ease,
+      border-color 150ms ease;
+  }
+
+  .ax-toggle span:hover {
+    color: var(--color-fg);
+  }
+
+  /* Solid once applied: a rule that is actually in force should not look like
+     a suggestion. */
+  .ax-toggle input:checked + span {
+    border-style: solid;
+    border-color: var(--color-accent-dim);
+    color: var(--color-accent);
+  }
+
+  .ax-toggle input:focus-visible + span {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  .ax-reset {
+    align-self: center;
+    border: 0;
+    background: none;
+    padding: 0 0.25rem;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--color-fg-muted);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--color-border-strong);
+    transition: color 150ms ease;
+  }
+
+  .ax-reset:hover {
+    color: var(--color-fg);
+  }
+
+  /* Stated plainly, not alarmingly. The palette has one accent and no red, and
+     a finding reads as more serious for being calm about it. */
+  .ax-finding {
+    max-width: 42rem;
+    border-left: 1px solid var(--color-accent-dim);
+    padding: 0.1rem 0 0.1rem 0.85rem;
+  }
+
+  .ax-finding-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.6rem;
+    margin: 0;
+  }
+
+  .ax-finding-title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-accent);
+  }
+
+  .ax-finding-body {
+    margin: 0.3rem 0 0;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.55;
+    color: var(--color-fg-muted);
+  }
+}
+
+/* --- Permission sandbox: scenarios, requirements and the editor ------------ */
+@layer components {
+  .ax-brief {
+    max-width: 42rem;
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--color-fg);
+  }
+
+  .ax-reqs {
+    display: grid;
+    gap: 0.75rem 2.5rem;
+  }
+
+  /* Two columns from 23rem, not 34rem. Reading "must be able to" beside "must
+     not" is the comparison the section is built on, so the pairing is worth
+     keeping on a phone rather than stacking one list under the other.
+     23rem is measured, not chosen: the longest label sits on one line down to
+     364px, and below that three of the four wrap to two lines — at which point
+     the columns cost more than the pairing buys. */
+  @media (width >= 23rem) {
+    .ax-reqs {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  .ax-req-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.6rem;
+    margin: 0 0 0.35rem;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-fg-subtle);
+  }
+
+  .ax-req {
+    display: grid;
+    grid-template-columns: 1.2ch minmax(0, 1fr);
+    align-items: baseline;
+    gap: 0.15rem 0.6rem;
+    padding: 0.15rem 0;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-fg);
+  }
+
+  /* A dot until the visitor asks. Checking is a commitment, so the answer is
+     absent rather than pre-empted — and an edit puts the dots back. */
+  .ax-req-mark {
+    color: var(--color-fg-subtle);
+  }
+
+  .ax-req:has(.is-missed) .ax-req-mark {
+    color: var(--color-fg);
+  }
+
+  /* A limit the brief withheld. Dim and monospaced-even, so a column of them
+     reads as "three things to work out" rather than as missing content. */
+  .ax-req-label.is-unknown {
+    color: var(--color-fg-subtle);
+    letter-spacing: 0.15em;
+  }
+
+  .ax-req .ax-reason {
+    grid-column: 2;
+  }
+
+  .ax-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .ax-check {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.9rem;
+  }
+
+  .ax-run {
+    display: inline-flex;
+    min-height: 2.25rem;
+    align-items: center;
+    padding-inline: 1rem;
+    border: 1px solid var(--color-accent-dim);
+    border-radius: 3px;
+    background-color: var(--color-bg);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-accent);
+    cursor: pointer;
+    transition: background-color 150ms ease;
+  }
+
+  .ax-run:hover {
+    background-color: var(--color-accent-faint);
+  }
+
+  .ax-grade {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-fg-muted);
+  }
+
+  .ax-grade.is-solved {
+    color: var(--color-accent-soft);
+  }
+}
+
+/* --- Permission sandbox: the shared control row and the scoping condition -- */
+@layer components {
+  /* Label above chips on a phone, beside them from sm up.
+     Inline labels do not form a column — "level" is 34px and "deploy keys" is
+     75px — so every group started at a different x and the whole block read as
+     accidental. Stacking removes the ragged edge and hands the chips the full
+     width, which also costs fewer wrapped rows than it adds. */
+  .ax-ask-line {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  /* A grid from sm up, not a wrapping row. With flex, a long chip set pushes
+     itself onto the next line and starts at the container edge while shorter
+     ones sit beside their label — two different left edges in the same block.
+     Two columns give every group the same one. */
+  @media (width >= 34rem) {
+    .ax-ask-line {
+      display: grid;
+      grid-template-columns: 5.5rem minmax(0, 1fr);
+      align-items: baseline;
+      gap: 0.5rem 0.75rem;
+    }
+  }
+
+  /* A condition on the grants beside it, not another grant — so it reads as a
+     modifier rather than a fourth permission. */
+  .ax-toggle.is-condition span {
+    margin-left: 0.5rem;
+    font-style: italic;
+  }
+
+  .ax-toggle.is-condition input:checked + span {
+    font-style: normal;
+  }
+}
+
+/* --- Permission sandbox: phone density ------------------------------------ */
+@media (width < 34rem) {
+  @layer components {
+    /* Slightly tighter chips and rhythm. Everything stays above the 24px tap
+       target floor — 28px high with 10px of side padding. */
+    .ax-role span,
+    .ax-toggle span {
+      min-height: 1.75rem;
+      padding-inline: 0.5rem;
+      font-size: 10px;
+    }
+
+    .ax {
+      gap: 0.9rem;
+    }
+
+    .ax-editor {
+      gap: 0.6rem;
+      padding-top: 0.6rem;
+    }
+
+    .ax-reqs {
+      gap: 0.6rem;
+    }
+
+    /* Narrower mark gutter buys ~10px per column — the difference between the
+       longest requirement fitting on one line at 375px and not. */
+    .ax-req {
+      grid-template-columns: 1ch minmax(0, 1fr);
+      gap: 0.1rem 0.35rem;
+    }
+
+    .ax-brief {
+      font-size: 11px;
+    }
   }
 }

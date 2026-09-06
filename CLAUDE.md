@@ -142,7 +142,10 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
 - Contact section (email, GitHub, LinkedIn).
 - Resume: downloadable, but NOT its own dedicated section — just placed somewhere accessible
   (e.g. nav or footer).
-- Primary nav stays minimal: TAHA / STACK / CONTACT (no ABOUT and no WORK nav item).
+- Primary nav: TAHA / STACK / ACCESS / CONTACT. Still no ABOUT and no WORK item. ACCESS was added
+  after the permission sandbox replaced the API Simulation — that section deliberately had no nav
+  item because it was mysterious by design, whereas this one is legible at a glance, and naming
+  it in the nav states the specialism it is evidence for.
 
 ### Interactive layer (discovered, not advertised)
 
@@ -246,9 +249,13 @@ taha` from a one-line joke into something that can actually be **earned**. An
   - **A real policy engine**, DOM-free and testable in Node without a browser, the same way the
     old engine was. That is where the engineering credibility lives, and it is what an engineer
     reading the repo will actually look at.
-  - **It leaves a residue.** The visitor ends up with a configuration they built. That is what
-    Phase 4 has to remember them by, and it is a large part of why this shape was chosen. The
-    policy the visitor configures **persists** to localStorage; this is progress, not content.
+  - **Nothing here persists.** A draft is an attempt at a puzzle, not a preference: finding
+    yesterday's half-finished answer already filled in is worse than starting clean, and it robs
+    the visitor of the blank page the scenario is meant to hand them. A reload resets it.
+    **This is a change from the original plan**, which had the policy persisting as the residue
+    Phase 4 would remember. It does not, so Phase 4 must take something else from this pillar —
+    _which scenarios were solved_ is the obvious candidate, and it is a different thing from the
+    draft. Decide it there, not here.
   - **A fictional workspace, not this site.** Projects, an invoice, an API key, a member list.
     Making the resources _this site_ — "who can edit the hero?" — is cuter but risks implying the
     permissions are real, and tangles this pillar into the customization one. Decided: fictional.
@@ -443,10 +450,11 @@ tried, because reading that needs a script and the page otherwise needs none.
 - The stack, and **why** each piece was chosen — especially why Astro (zero client JS by default)
   and why there is no backend. The reasoning is the interesting part; a bare list is not.
 - The performance constraint and the evidence it was met (real numbers: bundle sizes, Lighthouse
-  scores, the fact that the recruiter path ships zero JS).
-- The API Simulation explained honestly: what it demonstrates (rate limiting, caching, queue with
-  backpressure, circuit breaker), and that the load is simulated client-side rather than real.
-  Never imply it is a live system.
+  scores). State the JS honestly per the "On 'zero JS'" note above — the recruiter path ships only
+  the on-demand loaders, measured, not zero. Do not round it down to zero for a better line.
+- The Permission Sandbox explained honestly: what it demonstrates (a real policy engine — explicit
+  denials win, conditional grants, least-privilege grading, privilege-escalation analysis), and
+  that the workspace it reasons about is fictional. Never imply it guards anything real.
 - How to run it locally (Node version, install, dev, build).
 - Notable tradeoffs and what was deliberately cut. This section is the most useful signal to
   another engineer, so do not skip it.

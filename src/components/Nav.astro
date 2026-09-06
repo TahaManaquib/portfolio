@@ -20,12 +20,27 @@ import { site } from '../data/site';
 
 const links = [
   { href: '#stack', label: 'Stack' },
+  // The sandbox earns a nav item where the section it replaced deliberately had
+  // none. That one was mysterious by design; this one is legible in five
+  // seconds, and "access" in the nav states the specialism the whole section
+  // is evidence for.
+  { href: '#access', label: 'Access' },
   { href: '#contact', label: 'Contact' },
 ] as const;
 ---
 
 <nav aria-label="Primary" class="border-border bg-bg sticky top-0 z-40 border-b">
-  <div class="gutter flex h-14 items-center justify-between gap-4 sm:gap-6">
+  {
+    /* Wraps rather than overflows. Four links plus the résumé simply do not fit
+      one line on a phone — the row needed 406px against the 312px a 360px
+      screen leaves after the gutter — and nothing here is optional enough to
+      hide. Tighter gaps below sm keep it on one line as far down as possible;
+      below that it becomes two rows and the nav grows, which is the honest
+      trade. Height is auto rather than h-14 so the second row is not clipped. */
+  }
+  <div
+    class="gutter flex min-h-14 flex-wrap items-center justify-between gap-x-2 gap-y-1 py-2 sm:gap-x-6 sm:py-0"
+  >
     <a
       href="#top"
       class="text-fg hover:text-accent inline-flex min-h-9 items-center font-mono text-sm font-medium tracking-[0.2em] transition-colors duration-150"
@@ -33,7 +48,7 @@ const links = [
       TAHA
     </a>
 
-    <ul class="flex items-center gap-4 sm:gap-6">
+    <ul class="flex flex-wrap items-center gap-x-2 gap-y-1 sm:gap-x-6">
       {
         links.map(({ href, label }) => (
           <li>
@@ -54,7 +69,13 @@ const links = [
           rel="noopener noreferrer"
           class="border-border text-fg-muted hover:border-accent-dim hover:text-accent inline-flex min-h-9 items-center rounded-sm border px-2.5 text-xs tracking-wider uppercase transition-colors duration-150 sm:text-sm"
         >
-          Résumé
+          {
+            /* The widest item in the row by some way, and the one that pushed a
+              360px phone from two lines to three. "CV" is what the file is
+              actually called, so the short form costs nothing. */
+          }
+          <span class="sm:hidden">CV</span>
+          <span class="hidden sm:inline">Résumé</span>
           <span class="sr-only">&nbsp;(opens in a new tab)</span>
         </a>
       </li>
