@@ -123,9 +123,13 @@ reveals it. Its editable-values tier is Phase 3.5 below.
 
 ---
 
-## Phase 3 — The API Simulation + easter eggs
+## Phase 3 — The API Simulation (REMOVED) + easter eggs
 
-**Goal:** the discovery layer, built around the API Simulation as the spine.
+**The API Simulation was built in full and then removed.** Everything below is kept as a record
+of what existed and why it did not work — see Phase 3.6 for what replaced it, and CLAUDE.md for
+the diagnosis. The easter eggs from step 6 (the hidden terminal command and the 404) survive.
+
+**Goal at the time:** the discovery layer, built around the API Simulation as the spine.
 
 **Achievements are deferred to Phase 5** — see CLAUDE.md. The list is not designed yet and will
 be derived from the finished site. Build the _unlock moments_ (crash, bug icon, each stage
@@ -461,43 +465,256 @@ Non-negotiables:
 
 ---
 
-## Checkpoint — cut the API Simulation back
+## Phase 3.6 — The three pillars
 
-**Runs after Phase 3.5 and before Phase 4.**
+**Resolves the checkpoint that used to sit here.** The question was whether to cut the API
+Simulation back; the answer, reached with Taha, was to **remove it** and to settle what the site's
+interactive layer actually consists of. Three pillars, deliberately three different _kinds_ of
+thing:
 
-**The simulation is finished and it is too big. Do not start Phase 4 until this is resolved.**
-Taha's own words after stage 5 landed: _"i myself am not understanding the API endpoint part, how
-will others understand it"_ — the person who commissioned it cannot follow it, so a recruiter
-certainly cannot.
+| Pillar                 | What it demonstrates              | Residue it leaves  |
+| ---------------------- | --------------------------------- | ------------------ |
+| **Permission Sandbox** | engineering depth, his speciality | a config you built |
+| **Terminal**           | a tool, and a place with secrets  | history and access |
+| **Customization**      | the portfolio becomes yours       | your vibe          |
 
-The mechanics are not the problem; the legibility is. Every step was verified for "is this
-technically honest" and none for "can a person follow this". The diagnosis, recorded so it is not
-re-derived:
+Those three residues are what Phase 4 remembers a returning visitor by, and what the Phase 5
+achievement list gets derived from. Do not design achievements here.
 
-- **The visitor stops being the one doing it.** Stage 1 is broken by hand and feels caused.
-  From stage 2 on you press "run exploit" and watch numbers, because those attacks genuinely
-  require machine timing. You become the audience for your own game.
-- **There is no sense of place.** Nothing ever states which stage you are on, how many there are,
-  or what is protecting the endpoint right now. It has to be reconstructed from a chain of words
-  and six counters.
-- **"Say nothing up front" got over-applied.** That rule exists to protect the _first_ discovery.
-  Applied forever it means the game still refuses to explain itself after the visitor has crashed
-  it and clearly opted in — which is obscurity, not mystery.
-- **Stage 4 depends on the multi-identity idea**, the hardest thing here to feel. Eight callers
-  each obeying their own limit cannot be experienced, only reported.
+**Build order is fixed, and each pillar is planned separately before any of it is written.** They
+are independent — do not start two at once, and do not scaffold ahead.
 
-**The leading proposal** (not yet decided — revisit with Taha): cut the _visitor's_ path to three
-stages, ending at the cache, and keep the full engine in the repo. CLAUDE.md already holds that
-the backend credibility comes from the code rather than a running system, and the queue,
-backpressure and breaker read well to an engineer who opens the source — which is the reader they
-were always for. A recruiter was never going to reach stage 5. Pair the cut with a persistent
-"where am I" line and with un-hiding the toolkit after the first crash, since three stages still
-needs to say where you are.
+### 3.6a — The Permission Sandbox
 
-Also open, and worth deciding at the same time: **whether the section deserves this much of the
-page at all.** It sits between Stack and Contact on a deliberately minimal portfolio and is the
-largest thing on it even at three stages. A version that keeps only the crash and one fix, with
-all remaining depth in the repo, is a legitimate outcome.
+Replaces the API Simulation, which is deleted rather than left unreachable. See CLAUDE.md for the
+full spec and for why the old shape failed. One screen, no stages, no win state; a real DOM-free
+policy engine underneath, testable in Node.
+
+**Step 1 — removal: done.** 1,976 lines deleted across seven files (engine, island, defect report,
+static markup, five blocks of CSS). Always-present JS fell from 1,278 to 805 bytes gzipped.
+
+**Step 2 — engine + read-only sandbox: done.** `src/islands/access/policy.ts` is the whole model in
+one pure function: explicit denials win outright, grants may carry a per-resource condition, and
+anything unmatched is denied. 16 assertions in Node; all 36 role x question combinations resolve.
+Notes worth keeping:
+
+- **The cast is asymmetric on purpose.** `billing` can pay an invoice and `admin` cannot. Most
+  people read roles as a ladder, and one click between those two breaks that assumption without a
+  word of explanation. It is the section's hook and it cost nothing.
+- **Two projects, not one.** Apollo is yours, Zephyr is Dana's. An ownership condition described
+  in prose is forgettable; the same role giving two different answers to the same question one row
+  apart is not.
+- **The static HTML carries real answers**, computed at build time by the same engine the island
+  uses. A visitor who never clicks still reads something true — including the hook, since
+  `pay it · denied · nothing gives admin this` is in the shipped markup with no JS at all.
+- **Preact here, unlike the palette control.** There is genuine state — selected role, open trace,
+  and next a mutable policy with analysis derived from it. The deviation last time was justified
+  by there being none.
+- **Two columns, matching Stack and Contact.** A stacked layout spent four rows on group headers
+  and read as a widget; borrowing the site's existing label-left rhythm reclaimed them and made it
+  read as part of the page. Section went 761px -> 642px.
+- **Step 4 — scenarios: done. The section became a puzzle.** The summary table and the three
+  policy toggles are gone; in their place a brief, a list of requirements, a permission editor and
+  a **check** button. The visitor produces something and finds out whether it is right.
+  - **Three shapes of task, not three difficulties**, and unordered — a numbered list to work
+    through is a curriculum, which is what sank the section this replaced. _the contractor_ builds
+    a role from nothing, _running the team_ satisfies a constraint, _after the leak_ starts
+    over-permissioned so the operation is subtraction.
+  - **Least privilege is the real bar.** Pass/fail is not interesting; two people can both satisfy
+    a brief while one grants three permissions nobody asked for. `needed` is derived from the
+    requirements themselves rather than stored as an answer key, so it cannot drift: _"solved, but
+    1 more than needed: view deploy keys"_.
+  - **Only a `build` is graded on minimality.** A `fix` scenario starts holding permissions the
+    brief never mentions, where "extra" is noise rather than a finding — it just says `solved`.
+  - **Checked on demand, at Taha's request, and any edit throws the verdict away.** Checking is a
+    commitment; a tick left over from a policy that no longer exists is worse than no tick. The
+    requirements sit at `·` until asked, then resolve to ✓/✗ with the reason.
+  - **The escalation detector became a fail condition** rather than a warning. "Running the team"
+    reads like it includes changing roles; granting that trips the detector and fails the brief.
+    Far better use of it than a notice.
+  - **Denials survive the visitor's edits.** `policyFor` replaces only the edited role's _allows_
+    — denials belong to the organisation, and a visitor who could untick one would be able to
+    grant their way around a block, which the model says is impossible. Asserted.
+  - **The probe was removed entirely**, after being kept and then folded away. Taha could not tell
+    what "ask a question" was for, which is the only verdict that matters for a control nobody
+    asked for. Everything it explained, the requirement rows already explain in plain words.
+  - **Step 5 — three levels, nine briefs: done.** Difficulty is a demand stacked on the grading,
+    and each level has its own three scenarios: nine distinct runs out of one model.
+    - **stated** — meet the brief; extras are reported but tolerated.
+      **minimal** — and grant nothing beyond it.
+      **judgement** — and the must-not list is hidden; you are told what the person needs to do
+      and have to work out the limits yourself.
+    - **Nothing is locked.** A level is chosen, never earned. The moment it gates, this is a
+      curriculum again — the thing that sank the section it replaced.
+    - **The fairness rule for judgement:** an unstated limit may only be one that follows from
+      least privilege. Never a business opinion. "Common sense" is not common, and marking a
+      defensible answer wrong turns a test of judgement into guess-what-the-author-thought.
+    - **Minimality had to be defined for subtraction too**, or "after the leak" could not sit at
+      the minimal level: `needed` for a fix is what the role started with, minus what must go.
+      That also made the scenario sharper.
+    - **Judgement needs content minimality cannot express**, or it would just be the level below
+      wearing a hat — extras already fail there. Conditions are that content: `only their own` is
+      a modifier, not an action, so it is invisible to the extras count. Someone can be perfectly
+      minimal and still hand a contractor edit rights over everyone else's work.
+    - The nine are distinct in kind, not difficulty: domain / narrow / read-only, then
+      grant-precision / near-miss / revoke-precision, then condition / escalation / read-vs-write.
+    - **It earned a nav item: TAHA / STACK / ACCESS / CONTACT.** The section it replaced
+      deliberately had none, being mysterious by design; this one is legible in five seconds, and
+      naming it in the nav states the specialism it is evidence for. "Access" over "Sandbox"
+      because it matches the section heading and says what the subject is, not merely that there is
+      something to play with.
+    - **A fourth link broke the mobile nav, and exposed that it was already broken.** The row
+      needed 406px against the 312px a 360px screen leaves after the gutter — and 322px without
+      the new link, so it was already overflowing by 10px before this change. Fixed by letting the
+      row wrap, tightening the gaps below `sm`, and shortening the widest item: the résumé button
+      reads **CV** on small screens, which is what the file is called anyway. One row from 360px
+      up, two below that, no horizontal overflow at any width, 36px tap targets throughout.
+    - **`scroll-padding-top` went 5rem -> 6.5rem** to clear the two-row nav at 320px.
+    - **Container-width simulation cannot test responsive classes.** Shrinking a wrapper and
+      measuring told me the fix had not worked, because `sm:hidden` keys off the viewport, not the
+      parent. An iframe at the target width has its own viewport and gives the real answer — use
+      that for anything behind a breakpoint.
+    - **The section itself then needed the same pass**, at Taha's report that it "doesn't look
+      well optimized for phone". Two defects at 375px, neither of them overflow:
+      - **A ragged left edge.** The label column is intrinsic, so `level` (34px), `people` (41px),
+        `projects` (54px) and `deploy keys` (75px) each started their chips at a different x —
+        four columns where the design has one. Fixed by making `.ax-ask-line` a **two-column grid**
+        (`5.5rem minmax(0, 1fr)`) from 34rem up. A wrapping flex row was the obvious fix and the
+        wrong one: it seats short groups beside their label and long ones underneath, which
+        produces _two_ left edges instead of one.
+      - **Below 34rem the label goes above the chips** rather than beside them. A 5.5rem gutter out
+        of 345px is a sixth of the screen spent on four words, and the chips are the content.
+      - A phone density block (`@media (width < 34rem)`) trims chips to a 28px min-height, 10px
+        text and 0.5rem padding, and tightens the section's gaps. 28px keeps AA 2.5.8 (24px) with
+        margin; the 36px used elsewhere would have cost another row per group.
+      - Measured after, at four widths: one distinct chip left-edge at every one, no horizontal
+        overflow, min chip 28px on phones and 30px above. Section height 944px -> 901px on a
+        phone, 736px on desktop. The remainder is the editor (326px) and the requirement lists
+        (136px), which is content — trimming it further means restructuring the editor, which is
+        not worth risking the desktop layout for.
+      - **Then the two requirement lists were paired on phones too**, at Taha's ask — they had been
+        stacked below 34rem. Reading _must be able to_ beside _must not_ **is** the comparison the
+        section is built on, so losing it on the device most people arrive on was the wrong trade.
+        Forcing it naively is genuinely ugly, though, and the measurement says exactly where the
+        line is:
+        - At 342px content the columns are 131px and **three of the four labels wrap to two
+          lines**, failure notes to three, for a saving of only 26-40px out of ~990. That is the
+          "weird and not cohesive" outcome, and dropping to 10px type does not rescue it — it
+          buys 14px per label against a 40px shortfall.
+        - What actually pays is **width, not type size**. Two fixes together move the clean
+          threshold from 420px to 364px: a narrower mark gutter (`1ch` + `0.35rem` on phones,
+          worth ~10px a column) and shortening the single widest label.
+        - **`edit a project of Dana` -> `edit Dana's project`** — 146px to 126px, and better
+          English besides. It was the widest string in the whole set and the only one forcing the
+          issue; the possessive says the same thing in three fewer words.
+        - Breakpoint therefore **34rem -> 23rem** (368px), which is measured rather than picked:
+          one line down to 364px, two-line wrapping at 360px. Phones at 375px and up get the
+          pairing; a 320-360px screen keeps the stack, which is the right answer at that width.
+        - Verified at nine widths against the shipped CSS with the worst-case brief loaded
+          (judgement / _whose project is it_, verdicts shown): no wrapped label and no overflow
+          at any of them. Requirement block 172px -> 98px, and the section 937px -> 863px at
+          375px. Desktop is untouched at 755px.
+  - **Hidden limits render as one `???` each, not as a sentence.** The count is a fair hint —
+    it says how many boundaries there are to find without saying what they are — and a column
+    of placeholders reads as "three things to work out" rather than as missing content. They
+    reveal on check **with the visitor's verdicts against them**, which keeps a wrong guess
+    instructive rather than merely scolding, and return to `???` on the next edit along with
+    the verdict. Same `???` the achievements use for the same idea, so the site has one way of
+    saying "not yet known".
+
+  - **`Draft` became `{ actions, scoped }`** rather than a bare list, because a condition is not a
+    permission and modelling it as another checkbox would have made it look like one.
+  - **The pre-hydration bug class, now handled everywhere it applies.** Anything clicked before
+    the chunk arrives is very often the click that loaded it. Two places need it here: a ticked
+    permission is carried across the mount, and a press of **check** runs the check on arrival
+    rather than silently hydrating and appearing to do nothing. Fifth occurrence in this project
+    — assume it for every island, do not rediscover it.
+- **Step 3 — policy toggles + escalation: done.** Three switches the visitor can flip, each
+  chosen because it teaches something the default policy cannot, and an analysis that reads the
+  policy in force rather than the switches.
+  - **`admins change roles` is the star.** It creates a real privilege-escalation path, and the
+    finding states what is actually gained: transfer, pay, refund, remove someone — _including
+    `transfer`, the one thing an explicit deny blocks admins from doing._ The deny holds, and the
+    escalation walks around it by becoming the owner instead. That is exactly how this class of
+    finding defeats a carve-out in practice.
+  - **The analysis is derived, not matched.** `POLICY_CHANGING` names the actions that let a
+    holder rewrite the policy; a role that can reach one of them can assign itself any role, so
+    its true reach is the union of every role's permissions. Proven by three tests: granting
+    _member_ the same power surfaces a second finding with nothing in the code mentioning member,
+    denying the vector removes the finding entirely, and the gains list shrinks when another
+    toggle removes an action from everyone.
+  - **`members delete anything`** shows an unconditional grant overriding an ownership condition.
+    **`nobody deletes projects`** applies a blanket deny that stops even the owner — the wildcard
+    does not save them, which is the clearest possible statement of deny-overrides-allow.
+  - **A toggle flipped before the chunk arrives survives the mount**, read from the checkbox at
+    mount time. Third occurrence of that bug class after the API section's clicks and the
+    palette's colour; it is worth assuming rather than discovering next time.
+  - **Nothing persists, decided late.** The policy did save for a while, on the grounds that it
+    was the residue Phase 4 would remember. Taha cut it: a draft is an attempt at a puzzle, not a
+    preference, and a half-finished answer restored on the next visit is worse than a blank page.
+    Phase 4 will need a different residue from this pillar — most likely which briefs were
+    solved, which is a different thing from the draft and belongs to that phase.
+  - Findings state themselves calmly — one accent, no red the palette does not have. Verified
+    7.77:1 worst case across the presets. Section rests at 710px, 810px with every toggle on and
+    a finding showing.
+- **Step 2b — the composer: done.** A second layer of agency on top of the summary: `can you
+[action] [resource]` with a verdict, a plain reason, and the same expandable trace.
+  - **The condition it had to meet.** A composer that only re-asks the questions already on
+    screen is a second way to read the same data — the exact criticism the terminal earned. So
+    the model was widened past the summary: a Deploy key resource, and `transfer`, `refund`,
+    `remove`. **18 askable combinations against 7 listed**, asserted in the suite.
+  - **It reuses the selected role rather than adding its own.** Two places to pick a role is two
+    sources of truth; reusing it also shortens the sentence to "can you…", reinforcing the
+    framing above instead of competing with it.
+  - **Actions are filtered by resource kind**, and changing the resource snaps the action to one
+    that applies. Nothing can pay a project. Asserted, and it teaches that actions belong to
+    resource types rather than to a global list.
+  - **`admin` now has `project:*` _and_ an explicit deny on `transfer`.** That makes
+    deny-overrides-allow a live fact in the default policy instead of something only a test could
+    reach — and it is invisible in the summary, so the composer is the only way to find it. It is
+    also what the composer opens on, so the shipped static HTML poses a question worth clicking.
+  - **Chips, not `<select>`.** Native selects were tried and replaced: a dropdown's popup is drawn
+    by the OS and ignores the palette entirely, which is glaring once a visitor recolours the
+    site. A custom listbox was rejected too — it means reimplementing keyboard navigation, focus
+    management and ARIA, which is exactly where bespoke dropdowns quietly break. The option counts
+    are tiny (5 resources, at most 4 actions), so the composer reuses the same radio-chip control
+    as the role selector. One visual language, native keyboard behaviour, no `<select>` in the
+    build.
+  - Cost: 642px -> 675px, because dropping the two least informative rows (`view` on Apollo and
+    the invoice) paid for most of it. Fits 300px wide.
+- **`accent-soft`, not `accent-dim`, for the allowed verdict.** Verified across all four palettes:
+  worst case 7.12:1. `accent-dim` would have been ~4.4:1 under the azure and violet seeds, which
+  is exactly the trap the two-token split was introduced to avoid.
+
+### 3.6b — Terminal: real tools
+
+`jwt <token>` decoding locally, plus `hash`, `uuid`, `base64`. The bar is that an engineer can use
+the site to get actual work done.
+
+### 3.6c — Terminal: secrets worth finding
+
+A small challenge chain with locked commands and a token findable elsewhere on the site. Makes
+`sudo hire taha` earnable instead of a one-line joke.
+
+### 3.6d — Terminal: the control surface
+
+`theme`, `set`, `reset`, `open` — driving the same state as the source view. Plumbing that links
+the pillars; built last of the three terminal pieces because it is the least exciting on its own.
+
+### 3.6e — Customization: generated palettes
+
+10–14 hues generated through the existing three-seed `color-mix()` derivation, each
+contrast-validated at build time. Answers "four is not enough" without reintroducing the picker.
+
+### 3.6f — Customization: vibes
+
+Presets that change palette **plus** typography **plus** density **plus** border treatment — four
+or five named identities, each internally coherent. Still zero JS.
+
+**Parked, not cut:** reordering and hiding sections. Revisit after 3.6f.
+
+**Decided against:** a share link that encodes edited _content_ — it is a defacement vector aimed
+at Taha personally. Palette-only would be harmless.
 
 ---
 

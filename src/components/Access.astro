@@ -1,0 +1,174 @@
+---
+// The permission sandbox — the interaction that carries the engineering depth.
+// Replaces the API Simulation (removed); see CLAUDE.md for why that shape failed.
+//
+// No nav item: the nav stays TAHA / STACK / CONTACT. But unlike the thing it
+// replaces, this says what it is immediately — a brief, a list of requirements
+// and a set of switches. "Say nothing up front" protects a first discovery; it
+// was never meant to make a section unreadable.
+//
+// The markup below is the first scenario in its starting state, rendered from
+// the same data the island uses, so a visitor who never clicks still reads a
+// real brief rather than a placeholder.
+import {
+  DEFAULT_LEVEL,
+  LEVELS,
+  SCENARIOS,
+  actionsFor,
+  initialDraft,
+} from '../islands/access/policy';
+
+const scenario = SCENARIOS[0]!;
+const briefs = SCENARIOS.filter((s) => s.level === DEFAULT_LEVEL);
+const draft = initialDraft(scenario);
+const KINDS = [
+  { kind: 'project', label: 'projects' },
+  { kind: 'invoice', label: 'the invoice' },
+  { kind: 'people', label: 'people' },
+  { kind: 'apikey', label: 'deploy keys' },
+];
+---
+
+<section id="access" tabindex="-1" class="border-border py-section-sm sm:py-section border-b">
+  <h2 class="text-fg-muted font-mono text-xs tracking-wider uppercase">Access</h2>
+  <p class="text-fg-muted mt-2 font-mono text-xs">Give people exactly what they need.</p>
+
+  <div class="ax-host mt-8" data-access-host>
+    <div class="ax">
+      <div class="ax-ask-line">
+        <span class="ax-you">level</span>
+        <div class="ax-choices ax-wrap" role="group" aria-label="Difficulty">
+          {
+            LEVELS.map((l) => (
+              <label class="ax-role" title={l.demand}>
+                <input
+                  type="radio"
+                  name="ax-level"
+                  value={l.id}
+                  class="sr-only"
+                  checked={l.id === DEFAULT_LEVEL}
+                />
+                <span set:text={l.label} />
+              </label>
+            ))
+          }
+        </div>
+      </div>
+
+      <div class="ax-ask-line">
+        <span class="ax-you">brief</span>
+        <div class="ax-choices ax-wrap" role="group" aria-label="Scenario">
+          {
+            briefs.map((s) => (
+              <label class="ax-role">
+                <input
+                  type="radio"
+                  name="ax-scenario"
+                  value={s.id}
+                  class="sr-only"
+                  checked={s.id === scenario.id}
+                />
+                <span set:text={s.title} />
+              </label>
+            ))
+          }
+        </div>
+      </div>
+
+      <p class="ax-brief" set:text={scenario.brief} />
+
+      <div class="ax-reqs">
+        <div>
+          <p class="ax-req-head">must be able to</p>
+          <ul class="ax-rows">
+            {
+              scenario.requirements
+                .filter((r) => r.must)
+                .map((r) => (
+                  <li class="ax-req">
+                    <span class="ax-req-mark" aria-hidden="true">
+                      ·
+                    </span>
+                    <span class="ax-req-label" set:text={r.label} />
+                  </li>
+                ))
+            }
+          </ul>
+        </div>
+        <div>
+          <p class="ax-req-head">must not</p>
+          <ul class="ax-rows">
+            {
+              scenario.requirements
+                .filter((r) => !r.must)
+                .map((r) => (
+                  <li class="ax-req">
+                    <span class="ax-req-mark" aria-hidden="true">
+                      ·
+                    </span>
+                    <span class="ax-req-label" set:text={r.label} />
+                  </li>
+                ))
+            }
+          </ul>
+        </div>
+      </div>
+
+      <div class="ax-editor">
+        <p class="ax-req-head">{scenario.role} can</p>
+        {
+          KINDS.map((group) => (
+            <div class="ax-ask-line">
+              <span class="ax-you" set:text={group.label} />
+              <div class="ax-choices ax-wrap" role="group" aria-label={group.label}>
+                {actionsFor(group.kind).map((a) => (
+                  <label class="ax-toggle">
+                    <input
+                      type="checkbox"
+                      value={a.id}
+                      class="sr-only"
+                      checked={draft.actions.includes(a.id)}
+                    />
+                    <span set:text={a.label} />
+                  </label>
+                ))}
+                {group.kind === 'project' && (
+                  <label class="ax-toggle is-condition">
+                    <input type="checkbox" class="sr-only" checked={draft.scoped} />
+                    <span>only their own</span>
+                  </label>
+                )}
+              </div>
+            </div>
+          ))
+        }
+      </div>
+
+      <div class="ax-check">
+        <button type="button" class="ax-run" data-check>check</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  // Loads on the first touch of the section. Whatever the visitor clicked is
+  // already reflected in the static controls, so the island reads them rather
+  // than replaying the event.
+  const host = document.querySelector<HTMLElement>('[data-access-host]');
+  if (host) {
+    let loading: Promise<void> | null = null;
+    const boot = (event: Event) => {
+      // If the click that loaded us was the check button, run the check —
+      // otherwise the visitor presses it, the island quietly mounts, and
+      // nothing appears to happen.
+      const target = event.target;
+      const wantsCheck = target instanceof Element && target.closest('[data-check]') !== null;
+      loading ??= import('../islands/access/mount').then((m) => {
+        host.removeEventListener('click', boot);
+        m.mountAccess(host, wantsCheck);
+      });
+    };
+    host.addEventListener('click', boot);
+  }
+</script>
