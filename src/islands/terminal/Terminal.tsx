@@ -90,9 +90,25 @@ function saveHeight(px: number): void {
 }
 
 const MIN_PX = 120;
-const maxPx = () => Math.round(window.innerHeight * 0.9);
+
+/**
+ * How much page is left above the panel when it is dragged all the way up.
+ *
+ * **This is the knob for how tall the terminal can get** — lower it for a
+ * taller panel, raise it for a shorter one. It is deliberately not zero: at a
+ * true 100dvh the resize handle sits exactly on the viewport edge, where it is
+ * awkward to grab with a mouse and impossible to aim at with a trackpad flick,
+ * so the panel becomes something you can open to full height and then not drag
+ * back down. The strip is also the only remaining sign that the site is still
+ * there behind the panel.
+ */
+const TOP_RESERVE_PX = 40;
+
+const maxPx = () => Math.max(MIN_PX, window.innerHeight - TOP_RESERVE_PX);
 const defaultPx = () => Math.round(window.innerHeight * 0.5);
 const clampHeight = (px: number) => Math.min(Math.max(px, MIN_PX), maxPx());
+/** Derived, never written twice — a hardcoded max here would silently drift. */
+const maxPercent = () => Math.round((maxPx() / window.innerHeight) * 100);
 
 /**
  * The opening lines. On touch there is no physical keyboard, so the panel is
@@ -262,7 +278,34 @@ export default function Terminal({ onClose }: { onClose: () => void }) {
         setLines([]);
         return;
       }
+
       const echo: Line = { kind: 'in', text: input };
+
+      // `hash` goes through WebCrypto, which is async. Echo the command
+      // immediately so the line does not sit there looking ignored, then append
+      // the output when it resolves.
+      if (result instanceof Promise) {
+        setLines((prev) => [...prev, echo].slice(-MAX_LINES));
+        void result
+          .then((resolved) => {
+            if (resolved === 'cls') {
+              setLines([]);
+              return;
+            }
+            setLines((prev) => [...prev, ...resolved].slice(-MAX_LINES));
+          })
+          .catch((cause: unknown) => {
+            // Commands handle their own failures; this is the backstop, so a
+            // rejection surfaces in the terminal rather than only the console.
+            const line: Line = {
+              kind: 'err',
+              text: cause instanceof Error ? cause.message : String(cause),
+            };
+            setLines((prev) => [...prev, line].slice(-MAX_LINES));
+          });
+        return;
+      }
+
       setLines((prev) => [...prev, echo, ...result].slice(-MAX_LINES));
     },
     [value],
@@ -285,7 +328,7 @@ export default function Terminal({ onClose }: { onClose: () => void }) {
         aria-label="Resize terminal"
         aria-valuenow={Math.round((height / window.innerHeight) * 100)}
         aria-valuemin={Math.round((MIN_PX / window.innerHeight) * 100)}
-        aria-valuemax={90}
+        aria-valuemax={maxPercent()}
         tabIndex={0}
         data-dragging={dragging ? '' : undefined}
         onPointerDown={onPointerDown}

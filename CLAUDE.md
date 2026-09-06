@@ -154,8 +154,16 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
   - **A panel that slides up from the bottom**, full width, overlaying the page (the page stays
     scrollable behind it, like an editor). Never a centred modal.
   - **Height is drag-adjustable** from a handle on the top edge. Defaults to **50dvh** on first
-    open, then whatever the visitor set. Bounded: min ~120px so it stays usable, max ~90dvh so
-    the site is never entirely swallowed.
+    open, then whatever the visitor set. Bounded: min ~120px so it stays usable, max
+    `100dvh - 40px` so the site is never entirely swallowed. **Raised from ~90dvh at Taha's
+    request.** The 40px is not decoration: at a true 100dvh the resize handle sits exactly on the
+    viewport edge, where it cannot reliably be grabbed, so the panel would open to full height
+    and refuse to come back down. The strip also keeps the nav visible, which is the only
+    remaining sign the site is still behind the panel.
+    **The bound lives in two places and must be kept in step** — `TOP_RESERVE_PX` in
+    `Terminal.tsx` (the real clamp) and `max-height` on `.term` in `global.css` (the pre-hydration
+    backstop). A stricter value in the CSS silently overrides the island, which is exactly what
+    happened when the knob was raised and the stylesheet still said `90dvh`.
   - **Panel height persists to localStorage** — and this is a deliberate exception to the
     ephemeral rule that governs edits and palette. Those change _content_, where a
     returning visitor finding the site altered would be confusing. Height is a _UI preference_,
@@ -172,12 +180,15 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
   - **The resize handle must be keyboard-operable** — `role="separator"`, `aria-orientation`,
     `aria-valuenow`, arrow keys to nudge. If it can be resized with a mouse it must be resizable
     without one.
-  - **Entry:** ⌘K / Ctrl+K on desktop. On touch there is no keyboard, so a small visible button
-    appears there instead (`@media (hover: none)`). On desktop that same button stays in the
-    accessibility tree but is visually hidden — otherwise the feature would be undiscoverable to
-    a desktop screen-reader user.
-  - Commands: `about`, `stack`, `contact`, `cls`, `help`, plus the hidden `sudo hire taha`
-    (playful "permission denied"). Content commands render from the content module.
+  - **Entry: a visible button on every device**, bottom-right, paired with the source-view
+    toggle; ⌘K / Ctrl+K still works and is named in the button's tooltip. It used to be
+    touch-only and visually hidden on desktop, on the reasoning that ⌘K covered desktop and the
+    source view's JSON was the signpost. That put the discoverability of a headline pillar behind
+    "open the machine view and read it", which is too much to ask. The button is the entry point
+    now, and the JSON no longer carries a command list.
+  - Commands: `about`, `stack`, `contact`, `help`, `cls`, the four tools below, plus the hidden
+    `sudo hire taha` (playful "permission denied"). Content commands render from the content
+    module.
   - **Command history** on ArrowUp/ArrowDown, with the half-typed line preserved and consecutive
     duplicates skipped (as shells do with HISTCONTROL=ignoredups).
   - **The session persists.** Scrollback and history are written to localStorage, so closing the
@@ -188,9 +199,12 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
     can be hand-edited, corrupted, or left over from an older version of the component.
     A scrollback emptied by `cls` reads as "no session" on the next load, so the banner returns
     rather than the panel opening blank with no hint in it.
-  - The clear command is **`cls`**, not `clear`. Its name lives in
-    `site.interfaces.terminal.commands`, which is also what the source view advertises — the
-    terminal derives its command list from there, so the two cannot drift.
+  - The clear command is **`cls`**, not `clear`. Its name used to live in
+    `site.interfaces.terminal.commands` so the source view could advertise it and the two could
+    not drift. The source view no longer advertises commands, so there is nothing to drift from:
+    the registry now lives in `commands.ts`, where each command's **usage, one-line description
+    and implementation sit in the same object**. `help` is generated from it, so a command
+    cannot be added without also being documented.
   - **The filter for new commands:** the terminal only earns a command that does something you
     cannot do by pointing. Without that rule it accumulates commands the way the source view
     accumulated features. It is a _control surface_, not a second way to read the page.
@@ -203,11 +217,31 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
     can read the same data in another format". That is a failed feature. The fix is not more
     commands; it is commands that **do** rather than **print**. `perf` and `curl` both printed,
     which is exactly why they were boring. Three things are being built, **in this order**:
-    1. **Real tools.** `jwt <token>` decodes a JWT locally — header, claims, expiry — plus
-       `hash`, `uuid`, `base64`. Nothing is sent anywhere; these are real algorithms running in
-       the browser. An engineer who decodes a token here has _used the site to get work done_,
+    1. **Real tools — built.** `jwt <token>` decodes a JWT locally — header, claims, expiry —
+       plus `hash`, `uuid`, `base64`. Nothing is sent anywhere; these are real algorithms running
+       in the browser. An engineer who decodes a token here has _used the site to get work done_,
        which is the difference between a portfolio you look at and one you bookmark. Perfectly
-       on-brand for an engineer whose subject is auth.
+       on-brand for an engineer whose subject is auth. Rules that came out of building it:
+       - **The algorithms live in `tools.ts`, DOM-free and tested in Node**, exactly like
+         `policy.ts`. This is the part an engineer reading the repo actually opens, so it is not
+         allowed to be tangled up in the component.
+       - **`jwt` decodes; it must never look like it verifies.** It says so in the output, every
+         time. Verifying needs the signing key, which a static site does not have and would never
+         be given — and on an auth engineer's site this is the one place the copy must not
+         overstate itself. It also states that nothing was sent anywhere, which is true and
+         checkable in the repo.
+       - **Only the verb is normalised.** The argument is passed through untouched: tokens,
+         base64 and hash inputs are all case- and whitespace-sensitive, and the old
+         `input.toLowerCase()` over the whole line would have silently corrupted every one of
+         them.
+       - **`base64` never guesses the direction** — valid base64 is also valid text, so
+         `encode`/`decode` is required. And it goes through `TextEncoder`, because `btoa` throws
+         on anything outside Latin-1; "café" breaking would be a poor advertisement.
+       - **`hash` has no md5, and says why** rather than erroring blankly: WebCrypto omits it
+         deliberately. A real constraint, explained, beats a bare failure.
+       - **A command may return a Promise**, because `crypto.subtle` is async. The input echoes
+         immediately and the output appends when it resolves, so the line never looks ignored.
+       - `uuid` is capped at 10 so it cannot push out the 400-line scrollback.
     2. **Secrets worth finding.** A small challenge chain: some commands are locked and say what
        is missing without saying how to get it, and the token that unlocks them is findable
        elsewhere on the site — decoded with `jwt` to read the flag. This is what turns `sudo hire
@@ -373,11 +407,15 @@ taha` from a one-line joke into something that can actually be **earned**. An
   - **Honest content.** The machine view reflects what is actually true of the site. No invented
     fields, no fake status codes, no pretending a request happened. It _may_ describe real
     capabilities the human view does not surface — it must never describe things that are false.
-  - **It is the terminal's signpost.** The response includes an `interfaces` block naming the
-    terminal, its shortcut, and its commands — including the hidden one. Two reasons this is
-    deliberate rather than a spoiler: the terminal is otherwise undiscoverable (⌘K is advertised
-    nowhere), and a secret command leaking through an API response is a better joke than a
-    secret command nobody finds. It stays honest because those commands genuinely exist.
+  - **It leaks exactly one thing: the secret.** The payload used to carry an `interfaces` block
+    naming the terminal, its shortcut and every command, because the terminal had no visible
+    entry point and would otherwise have been undiscoverable. It has a button now, so the
+    signpost is redundant, and a command list was never really profile data — it made
+    `GET /taha` part config document. **Removed at Taha's request.**
+    What stays is a single top-level `undocumented: ["sudo hire taha"]`, which was always the
+    better half: a secret leaking through an API response beats a secret nobody finds. It is
+    honest, because the command genuinely works, and it is now the **only** place the command is
+    written down — `help` says "not everything is listed" and nothing more.
 
 ### Achievements — DEFERRED, do not design the list yet
 

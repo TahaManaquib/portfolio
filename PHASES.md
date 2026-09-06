@@ -686,10 +686,63 @@ Notes worth keeping:
   worst case 7.12:1. `accent-dim` would have been ~4.4:1 under the azure and violet seeds, which
   is exactly the trap the two-token split was introduced to avoid.
 
-### 3.6b — Terminal: real tools
+### 3.6b — Terminal: real tools — DONE
 
-`jwt <token>` decoding locally, plus `hash`, `uuid`, `base64`. The bar is that an engineer can use
-the site to get actual work done.
+`jwt <token>` decoding locally, plus `hash`, `uuid`, `base64`. The bar was that an engineer can use
+the site to get actual work done, and it is met: the digests match the published NIST vectors.
+
+- **`src/islands/terminal/tools.ts` is the deliverable**, not the commands. DOM-free, no imports
+  from the component, **38 assertions in Node** — the same split as `policy.ts`, for the same
+  reason: it is the file an engineer reading the repo will open. The commands are a thin printing
+  layer over it.
+- **Three bugs the tests caught before the browser did**, all of them the kind that only show up
+  on input nobody tries by hand:
+  - `btoa` throws on anything outside Latin-1, so `base64 encode café` would have failed. Fixed by
+    encoding to UTF-8 bytes first — asserted against Node's own base64 and against an emoji.
+  - Spreading a large byte array into `String.fromCharCode` overflows the call stack. Chunked at
+    32k; asserted with a 200k input.
+  - base64url needs `-`/`_` swapped back **and** its stripped padding restored. One test string,
+    `PDw_Pz8-Pg`, exercises all three at once.
+- **The whole-line `toLowerCase()` was a latent corruption bug.** Every existing command was a
+  single lowercase word, so nothing had exposed it; the moment an argument matters, lowercasing
+  and whitespace-collapsing the line silently mangles tokens, base64 and hash inputs. Dispatch now
+  splits verb from argument and only normalises the verb.
+- **`help` is generated from the registry**, with usage and a one-line description per command,
+  grouped content / tools / session. Usage, description and implementation live in one object, so
+  a command cannot be added without being documented.
+- **Commands may return a Promise**, because `crypto.subtle` is async. The echo goes in
+  immediately and the output appends on resolve, so the line never looks ignored. A `.catch`
+  backstop puts a rejection in the terminal rather than only the console.
+- **A per-row alignment helper aligns nothing.** `jwt` initially padded each claim against its own
+  width, which is a no-op; the column has to be measured across the whole block. Caught by eye in
+  the browser, not by the suite — worth remembering that formatting is not covered by unit tests.
+- **Cost:** always-present JS unchanged at 1,268 B gzipped. The terminal chunk went 3,297 -> 5,573 B,
+  all of it behind the button.
+
+**Two changes made alongside, at Taha's request.**
+
+- **The terminal button is now visible on every device** rather than touch-only and sr-only on
+  desktop. See CLAUDE.md — the old arrangement made a headline pillar's discoverability depend on
+  a visitor opening the machine view and reading it.
+- **The source view's `interfaces` block is gone**, and with it the shortcut and the command list.
+  What remains is one top-level `undocumented: ["sudo hire taha"]`. The removal is what the button
+  bought: the signpost existed because the terminal had no visible entry, and a command list was
+  never profile data. The joke was always the better half, and it is now the only written record
+  of the command.
+- Knock-on: `LISTED_COMMANDS` had derived from `site.interfaces.terminal.commands` specifically so
+  the JSON and the terminal could not drift. With the JSON out of that business the constraint
+  dissolves, and the registry moved into `commands.ts` where it belongs.
+- **The panel's height cap was raised**, also at Taha's request: `~90dvh` -> `100dvh - 40px`.
+  Two things worth keeping:
+  - **Not a true 100dvh.** The resize handle would then sit on the viewport edge, un-grabbable —
+    a panel you can open to full height and not drag back down. 40px keeps the handle reachable
+    and leaves the nav visible, which is the only remaining sign the site is behind the panel.
+  - **The bound was duplicated, and the duplicate won.** Raising the JS knob appeared to do
+    nothing: `.term` still carried `max-height: 90dvh`, and the stricter CSS cap silently clamped
+    the island's own clamp. Only caught because the measurement came back 626px against a
+    requested 655px — 626/695 being exactly 90% is what gave it away. Both sites now carry a
+    comment naming the other. `aria-valuemax` was hardcoded to `90` for the same reason and is
+    now derived.
 
 ### 3.6c — Terminal: secrets worth finding
 

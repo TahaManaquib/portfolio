@@ -321,8 +321,13 @@
     z-index: 60;
     display: flex;
     flex-direction: column;
+    /* These mirror MIN_PX and TOP_RESERVE_PX in Terminal.tsx. The island clamps
+       the height exactly; this pair is the backstop for the moment before it
+       hydrates and for a viewport that shrinks under a stored height. Keep them
+       in step — a stricter cap here silently overrides the island, which is
+       what happened when this said 90dvh and the knob said something else. */
     min-height: 120px;
-    max-height: 90dvh;
+    max-height: calc(100dvh - 40px);
     background-color: var(--color-bg);
     border-top: 1px solid var(--color-border-strong);
     font-family: var(--font-mono);
