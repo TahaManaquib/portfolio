@@ -1,0 +1,57 @@
+---
+/**
+ * Inlines one Lucide icon at build time.
+ *
+ * `lucide-static` rather than `lucide-react` or `lucide-preact` on purpose: the
+ * component packages ship a runtime, and the React one would drag in React
+ * alongside the Preact this project already uses. These are plain SVG files, so
+ * Vite's `?raw` reads them during the build and the icon arrives as markup —
+ * **zero client JavaScript**, which is the only way an icon belongs on the
+ * recruiter path at all.
+ *
+ * `stroke="currentColor"` is already on every Lucide file, so an icon takes the
+ * colour of whatever it sits in and needs no per-use styling.
+ */
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+interface Props {
+  /** Lucide icon name, e.g. `shapes`. Kebab-case, as the files are named. */
+  name: string;
+  /** Rendered size in px. Lucide draws on a 24x24 grid. */
+  size?: number;
+  class?: string;
+}
+
+const { name, size = 20, class: className } = Astro.props;
+
+// Read from the package rather than importing: a dynamic `import(...?raw)` with
+// a runtime name cannot be statically analysed, and enumerating 2,074 icons to
+// reach one is worse. This runs at build time only.
+//
+// Resolved from the project root, not from `import.meta.url`: during a build
+// this component is bundled into `dist/.prerender/chunks/`, so a path relative
+// to the module points at the wrong place and every icon "does not exist".
+const file = resolve(process.cwd(), 'node_modules/lucide-static/icons', `${name}.svg`);
+
+let svg: string;
+try {
+  svg = readFileSync(file, 'utf8');
+} catch {
+  // A typo'd name would otherwise render as nothing at all, silently.
+  throw new Error(`Icon "${name}" does not exist in lucide-static.`);
+}
+
+// Strip the licence comment, then set our own size and hook for styling. The
+// icon is decorative wherever it is used — every place it appears has adjacent
+// text or an aria-label — so it is hidden from assistive tech.
+svg = svg
+  .replace(/<!--[\s\S]*?-->/g, '')
+  .replace(/\swidth="24"/, ` width="${size}"`)
+  .replace(/\sheight="24"/, ` height="${size}"`)
+  .replace(/class="lucide[^"]*"/, `class="lucide ${className ?? ''}"`)
+  .replace('<svg', '<svg aria-hidden="true" focusable="false"')
+  .trim();
+---
+
+<Fragment set:html={svg} />

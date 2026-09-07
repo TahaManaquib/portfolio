@@ -18,7 +18,7 @@ const { primary, also } = site.stack;
 <section id="stack" tabindex="-1" class="border-border py-section-sm sm:py-section border-b">
   <h2 class="text-fg-muted font-mono text-xs tracking-wider uppercase">Stack</h2>
 
-  <dl class="mt-8 grid gap-y-6 sm:grid-cols-[9rem_1fr] sm:gap-x-10 sm:gap-y-5">
+  <dl class="label-grid mt-8 grid gap-y-6 sm:gap-x-10 sm:gap-y-5">
     {
       primary.map(({ label, items }, gi) => (
         <div class="contents" data-bind-item={`stack.primary.${gi}`}>
@@ -43,7 +43,7 @@ const { primary, also } = site.stack;
   </dl>
 
   <div class="border-border mt-8 border-t pt-6 sm:mt-10">
-    <dl class="grid gap-y-3 sm:grid-cols-[9rem_1fr] sm:gap-x-10">
+    <dl class="label-grid grid gap-y-3 sm:gap-x-10">
       <dt class="text-fg-muted font-mono text-xs tracking-wider uppercase sm:pt-0.5">also</dt>
       <dd class="m-0">
         <ul class="items flex flex-wrap gap-x-3 gap-y-1">

@@ -14,7 +14,7 @@
 // toggle pays for one listener and nothing else. See src/islands/edit/mount.ts.
 import { site } from '../data/site';
 import { machineRequestLine, machineStatusLines } from '../data/machine';
-import { THEMES, DEFAULT_THEME, contrast, readout } from '../data/themes';
+import { THEMES, FEATURED, SHAPE_OF, DEFAULT_THEME, contrast, readout } from '../data/themes';
 import JsonNode from './JsonNode.astro';
 
 // Built here rather than inline in the template: a `.join('\n')` inside the
@@ -37,7 +37,11 @@ const readouts = THEMES.map((theme) => ({
   {
     /* The radios sit here rather than beside their labels so `~` can reach the
       header from them. `for`/`id` still pairs them up, and the labels render up
-      in the control strip where they belong. */
+      in the control strip where they belong.
+
+      All twelve are rendered even though only four are labelled: an unlabelled
+      radio is still checkable, which is exactly what lets the terminal select a
+      palette the source view does not advertise. */
   }
   {
     THEMES.map((theme) => (
@@ -47,6 +51,19 @@ const readouts = THEMES.map((theme) => ({
         id={`theme-${theme.id}`}
         class="sr-only"
         checked={theme.id === DEFAULT_THEME.id}
+        data-polarity={theme.polarity}
+        data-shape={SHAPE_OF[theme.id] ?? 'clean'}
+        {...(FEATURED.includes(theme.id)
+          ? {}
+          : /* The eight unlisted palettes have no label, by design — they are
+               reachable only through the terminal's `theme` command. Without
+               this they were eight unnamed radios in the tab order, which axe
+               flags and which is genuinely worse than hiding them: a
+               screen-reader visitor met eight controls with nothing to
+               distinguish them. Hidden from assistive tech and out of the tab
+               order, they are still checkable programmatically, which is all
+               the command needs and all the `:has()` selector cares about. */
+            { tabindex: '-1', 'aria-hidden': 'true' })}
       />
     ))
   }
@@ -63,7 +80,15 @@ const readouts = THEMES.map((theme) => ({
       <div class="row">
         <span class="ctl">palette</span>
         <div class="choices" role="group" aria-label="Palette">
-          {THEMES.map((theme) => <label for={`theme-${theme.id}`}>{theme.label}</label>)}
+          {
+            /* Only the featured palettes get a label. The rest have radios (see
+              above) but no control on screen — they are reachable from the
+              terminal's `theme` command, which reads the radios rather than a
+              list of its own, so the two can never disagree about what exists. */
+            THEMES.filter((theme) => FEATURED.includes(theme.id)).map((theme) => (
+              <label for={`theme-${theme.id}`}>{theme.label}</label>
+            ))
+          }
         </div>
       </div>
 
@@ -120,7 +145,7 @@ const readouts = THEMES.map((theme) => ({
     gap: 1rem;
     padding-bottom: 1.25rem;
     margin-bottom: 1.5rem;
-    border-bottom: 1px solid var(--color-border);
+    border-bottom: var(--border-w) var(--border-style) var(--color-border);
   }
 
   .framing {
@@ -143,15 +168,22 @@ const readouts = THEMES.map((theme) => ({
     gap: 0.75rem;
   }
 
+  /* fg-muted, not fg-subtle: a label a visitor reads, at 3.19:1 otherwise. */
   .ctl {
     font-size: 10px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--color-fg-subtle);
+    color: var(--color-fg-muted);
   }
 
+  /* Named, not swatches. A row of colour chips was tried and reverted at Taha's
+     request: the names are the point — "amber" and "azure" say what they are,
+     where twelve anonymous squares make you click each one to find out. They
+     wrap to a second row rather than being abbreviated. */
   .choices {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     gap: 0.25rem;
   }
 
@@ -162,8 +194,8 @@ const readouts = THEMES.map((theme) => ({
     align-items: center;
     justify-content: center;
     padding-inline: 0.6rem;
-    border: 1px solid var(--color-border);
-    border-radius: 2px;
+    border: var(--border-w) var(--border-style) var(--color-border);
+    border-radius: var(--radius);
     font-size: 11px;
     color: var(--color-fg-muted);
     cursor: pointer;
@@ -206,32 +238,12 @@ const readouts = THEMES.map((theme) => ({
     display: none;
   }
 
-  /* Active state, focus ring and readout, all reaching forward from the hidden
-     radio. Written out per theme because a sibling combinator cannot be
-     parameterised — the alternative is a script, which is the thing this whole
-     control exists to avoid. */
-  #theme-default:checked ~ .head label[for='theme-default'],
-  #theme-amber:checked ~ .head label[for='theme-amber'],
-  #theme-azure:checked ~ .head label[for='theme-azure'],
-  #theme-violet:checked ~ .head label[for='theme-violet'] {
-    color: var(--color-accent);
-    border-color: var(--color-accent-dim);
-  }
-
-  #theme-default:focus-visible ~ .head label[for='theme-default'],
-  #theme-amber:focus-visible ~ .head label[for='theme-amber'],
-  #theme-azure:focus-visible ~ .head label[for='theme-azure'],
-  #theme-violet:focus-visible ~ .head label[for='theme-violet'] {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 2px;
-  }
-
-  #theme-default:checked ~ .head .ct-default,
-  #theme-amber:checked ~ .head .ct-amber,
-  #theme-azure:checked ~ .head .ct-azure,
-  #theme-violet:checked ~ .head .ct-violet {
-    display: inline;
-  }
+  /* The per-palette rules — which swatch each label paints, which one reads as
+     selected, and which contrast figures show — are generated in themes.ts and
+     emitted by Base.astro. A sibling combinator cannot be parameterised in CSS,
+     so at a dozen palettes writing them here by hand meant three dozen lines
+     kept in step manually; generating them is the same reason the seed rules
+     are generated. */
 
   /* Fixed, not adjustable. The size control that used to sit here was removed:
      11px is the size this is designed at, and it is scoped to the JSON so it was

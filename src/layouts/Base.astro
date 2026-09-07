@@ -9,8 +9,21 @@ import '../styles/global.css';
 import interWoff2 from '@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url';
 import SourceView from '../components/SourceView.astro';
 import TerminalLoader from '../components/TerminalLoader.astro';
+import AchievementsToggle from '../components/AchievementsToggle.astro';
 import { site } from '../data/site';
 import { themeCss } from '../data/themes';
+import { PUBLIC_SIGNING_KEY, TOKEN_PAYLOAD } from '../data/secret';
+import { signHs256 } from '../islands/terminal/tools';
+
+// Signed here, at build time, so the token in the comment below carries a real
+// HMAC that `auth` genuinely verifies — rather than a string pasted in and hoped
+// over. Astro frontmatter runs in Node, whose `crypto.subtle` is the same API
+// the browser verifies with, so one implementation covers both ends.
+//
+// This import is frontmatter-only, so `tools.ts` is not pulled into the client
+// bundle by it — the terminal chunk still loads it on demand and the recruiter
+// path pays nothing. Asserted by the bundle check, not assumed.
+const token = await signHs256(TOKEN_PAYLOAD, PUBLIC_SIGNING_KEY);
 
 interface Props {
   title: string;
@@ -26,6 +39,9 @@ const { title, description, path = '/' } = Astro.props;
 const titlePath = title === site.meta.title ? 'meta.title' : undefined;
 const descriptionPath = description === site.meta.description ? 'meta.description' : undefined;
 const canonical = new URL(path, Astro.site);
+
+// The source view renders only where its payload describes the page.
+const isHome = path === '/';
 
 // Social scrapers do not resolve relative URLs, so og:image must be absolute.
 // It resolves against `site` in astro.config.mjs — which is still a placeholder
@@ -91,9 +107,16 @@ const OG_IMAGE_ALT = `${site.name} — ${site.role}. ${site.pitch.lead}.`;
     {
       /* Source-view switch. It is first in <body> so sibling selectors in
         global.css can reach everything it controls. Zero JS — a real checkbox,
-        so it is keyboard-operable and announced correctly for free. */
+        so it is keyboard-operable and announced correctly for free.
+
+        **Homepage only.** The machine view is the second rendering of *this
+        page's* content, and only one page has one. Every other route was
+        shipping the entire `GET /taha` payload plus a toggle that swapped the
+        page for JSON about something else — on the 404 that is both incoherent
+        and 7.6 KB of it. The checkbox, the panel and the label are one feature
+        and are rendered as one. */
     }
-    <input type="checkbox" id="source-view" class="sr-only" />
+    {isHome && <input type="checkbox" id="source-view" class="sr-only" />}
 
     <a
       href="#main"
@@ -110,14 +133,41 @@ const OG_IMAGE_ALT = `${site.name} — ${site.role}. ${site.pitch.lead}.`;
 
     <slot name="footer" />
 
-    <SourceView />
+    {isHome && <SourceView />}
 
     <TerminalLoader />
 
-    <label for="source-view" class="source-toggle" title="Toggle source view">
-      <span class="glyph" aria-hidden="true">{'{ }'}</span>
-      <span class="when-off sr-only">View source data</span>
-      <span class="when-on sr-only">Back to the site</span>
-    </label>
+    <AchievementsToggle />
+
+    {
+      isHome && (
+        <label for="source-view" class="source-toggle" title="Toggle source view">
+          <span class="glyph" aria-hidden="true">
+            {'{ }'}
+          </span>
+          <span class="when-off sr-only">View source data</span>
+          <span class="when-on sr-only">Back to the site</span>
+        </label>
+      )
+    }
+
+    {
+      /* The one thing on this site that is only findable by reading the source.
+        It is a genuine HS256 JWT, signed at build time, and the terminal really
+        does verify the signature before granting anything — see
+        src/data/secret.ts for why that is a joke rather than a security claim.
+
+        Written through set:html because Astro strips comments from templates;
+        this has to survive into the shipped HTML, which is the entire point.
+        It is also the only comment in the output, so it does not hide in a
+        crowd — the puzzle is noticing that view-source is worth doing at all. */
+    }
+    <Fragment
+      set:html={`<!--
+  Nothing here is secret. The key that signs this ships to the browser as well.
+
+  ${token}
+-->`}
+    />
   </body>
 </html>

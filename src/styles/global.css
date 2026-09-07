@@ -30,6 +30,66 @@
 }
 
 /* ---------------------------------------------------------------------------
+   Identity typefaces (3.6h).
+
+   These belong to individual vibes, not to the site. **None of them is
+   downloaded unless the identity that uses it is selected** — a browser fetches
+   a @font-face's source only when rendered text actually matches the family, so
+   declaring one costs nothing but the few bytes of this rule. That is what
+   makes a per-identity typeface affordable against a hard performance
+   constraint, and it is measured rather than assumed: the default page must
+   still fetch exactly two font files.
+
+   Same latin subset and `font-display: swap` as the two above, so a vibe's
+   first paint behaves like the default's.
+   --------------------------------------------------------------------------- */
+@font-face {
+  font-family: 'Newsreader Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url('@fontsource-variable/newsreader/files/newsreader-latin-wght-normal.woff2')
+    format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Archivo Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('@fontsource-variable/archivo/files/archivo-latin-wght-normal.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Nunito Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 1000;
+  src: url('@fontsource-variable/nunito/files/nunito-latin-wght-normal.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Space Grotesk Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300 700;
+  src: url('@fontsource-variable/space-grotesk/files/space-grotesk-latin-wght-normal.woff2')
+    format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* ---------------------------------------------------------------------------
    Theme tokens.
 
    The default Tailwind color palette is cleared on purpose: this site has one
@@ -98,6 +158,23 @@
   --color-accent-soft: color-mix(in oklab, var(--color-accent) 65%, var(--color-fg-muted));
   --color-accent-faint: color-mix(in oklab, var(--color-accent) 15%, var(--color-bg));
 
+  /* Scrollbars. A `color-mix` on the seeds like everything else, so all twelve
+     identities recolour their scrollbars for free and a light ground inverts
+     with no light-specific values.
+
+     A scrollbar is a non-text UI component, so the bar is WCAG 1.4.11's 3:1,
+     not 4.5:1.
+
+     **54%, and the number is measured rather than picked.** This was
+     --color-fg-subtle (44%) first, which is 3.2:1 on the dark ground and looked
+     fine — and then failed on all six light identities at 2.77-2.79:1, because
+     the same mix is not the same contrast when the ground is pale. 50% lands on
+     exactly 3.00, which is no margin at all; 54% is the first step with real
+     room, at 3.35:1 worst case across the twelve. Asserted per theme, against
+     both the page ground and a panel's surface. */
+  --color-scroll-thumb: color-mix(in oklab, var(--color-fg) 54%, var(--color-bg));
+  --color-scroll-thumb-hover: var(--color-fg-muted);
+
   /* Typography */
   --font-sans:
     'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -113,9 +190,14 @@
   --text-heading--line-height: 1.15;
   --text-heading--letter-spacing: -0.02em;
 
-  /* Vertical rhythm between page sections */
-  --spacing-section: 6rem;
-  --spacing-section-sm: 4rem;
+  /* Vertical rhythm between page sections.
+
+     Derived from Tailwind's own base unit rather than fixed, so the density
+     axis of a vibe reaches the page's largest spacing and not only the small
+     utilities. At the default --spacing of 0.25rem these are exactly the 6rem
+     and 4rem they were before. */
+  --spacing-section: calc(var(--spacing) * 24);
+  --spacing-section-sm: calc(var(--spacing) * 16);
 
   /* The layout is full-bleed — there is no centered max-width column. Width is
      controlled by the `.gutter` edge padding below instead.
@@ -124,6 +206,127 @@
      wide monitor is unreadable. Only paragraphs are constrained; headings and
      layout content (stack list, contact row) use the full width. */
   --container-text: 36rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Vibe tokens.
+
+   A preset is not three colours — it is a whole character (CLAUDE.md 3.6f).
+   Colour is already handled by the three seeds; these are the other three axes,
+   collected here so a vibe can move all of them by overriding tokens and
+   nothing has to know a vibe exists.
+
+     typography  --font-display, plus the --text-display trio Tailwind already
+                 references as vars rather than inlining
+     density     --spacing, which is Tailwind v4's own base unit — every p-*,
+                 gap-* and m-* on the site derives from it, so one override
+                 rescales the whole page
+     borders     --radius, --radius-lg, --border-w
+
+   Defaults here are exactly what the site shipped before this existed, so the
+   default vibe is the absence of an override, the same way the default palette
+   is.
+   --------------------------------------------------------------------------- */
+:root {
+  /* Dark is the ground the site ships on. A light theme overrides this, which
+     is what keeps scrollbars, form controls and the canvas underlay in step
+     with the palette — without it a light theme looks broken at its edges. */
+  color-scheme: dark;
+
+  /* Two indirections, not a redefinition of the two font stacks. --font-sans
+     and --font-mono stay what they are; a vibe repoints what the page *uses*,
+     so "everything mono" is one override rather than a rewrite. */
+  --font-body: var(--font-sans);
+  --font-display: var(--font-body);
+  --radius: 2px;
+  --radius-lg: 3px;
+  --border-w: 1px;
+  --border-style: solid;
+  /* Tailwind's own border-style var, kept in step so `border-b` follows too. */
+  --tw-border-style: solid;
+  --display-case: none;
+  --display-weight: 500;
+
+  /* Layout, which an identity may move as well as colour and type. Changing
+     where the page sits is what makes a theme feel like a different site
+     rather than the same one repainted. */
+  --layout-align: left;
+  --layout-justify: flex-start;
+  /* `0` keeps the measure left-aligned; `auto` centres it. */
+  --layout-mx: 0;
+  /* Two columns puts section labels beside their content; `1fr` stacks them. */
+  --label-cols: 9rem 1fr;
+
+  /* The page ground.
+
+     Flat by default, and that default is load-bearing: a site-wide ambient
+     texture was built and removed once already because at any opacity it read
+     as noise competing with the content (CLAUDE.md, "Background"). What is
+     allowed now is a *deliberate* ground belonging to one identity, off unless
+     that identity is chosen — which is a different thing from decoration on the
+     page everyone sees. The shipped site stays flat. */
+  --vibe-bg: none;
+  --vibe-bg-size: auto;
+  --vibe-bg-repeat: repeat;
+
+  /* Panel depth. An 85% black glow reads as depth on a dark ground and as a
+     smudge on a light one, so the colour is a token the polarity can move. */
+  --shadow-color: rgb(0 0 0 / 85%);
+}
+
+/* Headings follow --font-display unless a utility says otherwise. The section
+   headings set `font-mono` explicitly and are unaffected: Tailwind's utilities
+   layer comes after base, so they still win. */
+@layer base {
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    text-transform: var(--display-case);
+  }
+}
+
+/* Tailwind inlines `1px` into these two utilities rather than referencing a
+   var, so the border-weight axis cannot reach them through the theme. Unlayered
+   on purpose: that is what lets these beat the utilities they are re-pointing.
+   The nav, the section rules and the footer all get their weight from here. */
+/* The hero follows the layout axis. Unlayered so these beat the utilities they
+   re-point — `font-medium` and the flex defaults both live in Tailwind's
+   utilities layer, and an unlayered rule outranks every layer. */
+#top {
+  text-align: var(--layout-align);
+}
+
+#top ul,
+#top .flex {
+  justify-content: var(--layout-justify);
+}
+
+#top > p {
+  margin-inline: var(--layout-mx);
+}
+
+h1 {
+  font-weight: var(--display-weight);
+}
+
+/* Section labels: beside their content, or stacked above. The columns used to
+   be a hardcoded Tailwind arbitrary value in two components, which put a real
+   layout axis out of reach of the identities. */
+@media (width >= 40rem) {
+  .label-grid {
+    grid-template-columns: var(--label-cols);
+  }
+}
+
+.border-b {
+  border-bottom-width: var(--border-w);
+  border-bottom-style: var(--border-style);
+}
+
+.border-t {
+  border-top-width: var(--border-w);
+  border-top-style: var(--border-style);
 }
 
 /* ---------------------------------------------------------------------------
@@ -149,17 +352,90 @@
    padding than there is viewport.
    --------------------------------------------------------------------------- */
 @utility gutter {
-  padding-inline: clamp(1.5rem, 15vw - 2rem, 12rem);
+  /* `15vw` is the viewport, which stops being the available width the moment a
+     side-docked terminal pushes the page over. On a 1440px viewport with a
+     400px dock the content box is 1040px, but a bare 15vw would still bill it
+     216px of padding a side and squeeze the column badly. --dock-push-w is the
+     dock's width, and only in push mode — it is 0 otherwise, so this reduces to
+     the original expression exactly. */
+  padding-inline: clamp(1.5rem, calc((100vw - var(--dock-push-w, 0px)) * 0.15 - 2rem), 12rem);
 }
 
 /* ---------------------------------------------------------------------------
    Base layer
    --------------------------------------------------------------------------- */
 @layer base {
+  /* ---------------------------------------------------------------------
+     Scrollbars.
+
+     **Only one of the two inherits, which is the trap here.** `scrollbar-color`
+     is an inherited property, so one declaration on :root reaches every scroll
+     container. `scrollbar-width` is *not* — set on :root alone it styled the
+     page bar and left the terminal's scrollback, the achievements list and the
+     source view on the 15px platform default, correctly coloured and the wrong
+     size. Measured, not read: `getComputedStyle(list).scrollbarWidth` said
+     `auto` while :root said `thin`. Hence the universal selector.
+
+     Every one of the twelve identities recolours them for free, light grounds
+     included, because the tokens are `color-mix` on the seeds like everything
+     else.
+
+     `thin` rather than a custom width: the standard property is what Firefox
+     and Chrome 121+ implement, and a scrollbar that keeps the platform's own
+     sizing is one fewer thing to get wrong at a zoom level nobody tested.
+
+     The track is transparent on purpose. The panels sit on `--color-surface`
+     and the page on `--color-bg`, and a transparent track takes whichever it
+     is standing on rather than needing a rule per container.
+     --------------------------------------------------------------------- */
+  :root {
+    scrollbar-color: var(--color-scroll-thumb) transparent;
+  }
+
+  /* Not inherited, so it has to be said everywhere. This is also what removes
+     the stepper arrows: they belong to the platform's `auto` scrollbar, and a
+     `thin` one has none. */
+  *,
+  ::backdrop {
+    scrollbar-width: thin;
+  }
+
+  /* Safari, which did not support `scrollbar-color` until 18.4, and older
+     Chromium. Where both are understood the standard property wins, so this is
+     a fallback rather than a second design. `background-clip` insets the thumb
+     without a border colour that would have to know its background. */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  /* No stepper arrows in the fallback either. */
+  ::-webkit-scrollbar-button {
+    display: none;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background-color: var(--color-scroll-thumb);
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-scroll-thumb-hover);
+  }
+
   html {
     scroll-behavior: smooth;
-    /* Anchor nav must not tuck section headings under the sticky nav. */
-    scroll-padding-top: 5rem;
+    /* Anchor nav must not tuck section headings under the sticky nav. The nav
+       is one row (57px) from 360px up, but wraps to two below that, so the
+       padding has to clear the taller case on the smallest screens. */
+    scroll-padding-top: 6.5rem;
     -webkit-text-size-adjust: 100%;
   }
 
@@ -181,8 +457,12 @@
 
   body {
     background-color: var(--color-bg);
+    /* `none` by default, so this costs nothing until an identity sets it. */
+    background-image: var(--vibe-bg);
+    background-size: var(--vibe-bg-size);
+    background-repeat: var(--vibe-bg-repeat);
     color: var(--color-fg);
-    font-family: var(--font-sans);
+    font-family: var(--font-body);
     font-synthesis-weight: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
@@ -192,7 +472,7 @@
   :focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
-    border-radius: 2px;
+    border-radius: var(--radius);
   }
 
   /* Section anchor targets carry tabindex="-1" so following a nav link moves
@@ -251,8 +531,8 @@
     min-height: 2.75rem;
     align-items: center;
     justify-content: center;
-    border: 1px solid var(--color-border);
-    border-radius: 3px;
+    border: var(--border-w) var(--border-style) var(--color-border);
+    border-radius: var(--radius-lg);
     background-color: var(--color-bg);
     color: var(--color-fg-muted);
     cursor: pointer;
@@ -314,21 +594,52 @@
 
   .term {
     position: fixed;
-    inset-inline: 0;
-    bottom: 0;
     z-index: 60;
     display: flex;
     flex-direction: column;
-    min-height: 120px;
-    max-height: 90dvh;
     background-color: var(--color-bg);
-    border-top: 1px solid var(--color-border-strong);
     font-family: var(--font-mono);
     font-size: 13px;
     line-height: 1.7;
+  }
+
+  /* Bottom dock — the default, and the only one below 40rem.
+
+     The min/max here mirror MIN_HEIGHT and BOTTOM_RESERVE in dock.ts. The
+     island clamps exactly; this pair is the backstop for the moment before it
+     hydrates and for a viewport that shrinks under a stored size. Keep them in
+     step — a stricter cap here silently overrides the island, which is what
+     happened once when this said 90dvh and the knob said something else. */
+  :root[data-dock='bottom'] .term,
+  :root:not([data-dock]) .term {
+    inset-inline: 0;
+    bottom: 0;
+    min-height: 120px;
+    max-height: calc(100dvh - 40px);
+    border-top: var(--border-w) var(--border-style) var(--color-border-strong);
     /* Lifts the panel off the page instead of letting it sit flat against it.
        Static, no animation — it is depth, not motion. */
-    box-shadow: 0 -24px 48px -24px rgb(0 0 0 / 85%);
+    box-shadow: 0 -24px 48px -24px var(--shadow-color);
+  }
+
+  /* Side docks. Mirrors MIN_WIDTH and SIDE_RESERVE in dock.ts. */
+  :root[data-dock='left'] .term,
+  :root[data-dock='right'] .term {
+    inset-block: 0;
+    min-width: 280px;
+    max-width: calc(100vw - 120px);
+  }
+
+  :root[data-dock='left'] .term {
+    left: 0;
+    border-right: var(--border-w) var(--border-style) var(--color-border-strong);
+    box-shadow: 24px 0 48px -24px var(--shadow-color);
+  }
+
+  :root[data-dock='right'] .term {
+    right: 0;
+    border-left: var(--border-w) var(--border-style) var(--color-border-strong);
+    box-shadow: -24px 0 48px -24px var(--shadow-color);
   }
 
   /* The drag target is taller than the visible rule — a 1px grab area is a
@@ -336,24 +647,55 @@
   /* Straddles the top edge so the grab area is reachable from just above the
      panel, as an editor sash is. The drag target is deliberately taller than
      the 1px rule it draws — a 1px target is miserable to hit. */
+  /* Straddles the panel's inner edge, whichever edge that currently is, so the
+     grab area is reachable from just outside the panel as an editor sash is. */
   .term-handle {
     position: absolute;
+    touch-action: none;
+    z-index: 1;
+  }
+
+  :root[data-dock='bottom'] .term-handle,
+  :root:not([data-dock]) .term-handle {
     top: -5px;
     inset-inline: 0;
     height: 11px;
     cursor: ns-resize;
-    touch-action: none;
-    z-index: 1;
+  }
+
+  :root[data-dock='left'] .term-handle {
+    right: -5px;
+    inset-block: 0;
+    width: 11px;
+    cursor: ew-resize;
+  }
+
+  :root[data-dock='right'] .term-handle {
+    left: -5px;
+    inset-block: 0;
+    width: 11px;
+    cursor: ew-resize;
   }
 
   .term-handle::after {
     content: '';
     position: absolute;
+    background-color: transparent;
+    transition: background-color 150ms ease;
+  }
+
+  :root[data-dock='bottom'] .term-handle::after,
+  :root:not([data-dock]) .term-handle::after {
     inset-inline: 0;
     top: 5px;
     height: 1px;
-    background-color: transparent;
-    transition: background-color 150ms ease;
+  }
+
+  :root[data-dock='left'] .term-handle::after,
+  :root[data-dock='right'] .term-handle::after {
+    inset-block: 0;
+    left: 5px;
+    width: 1px;
   }
 
   .term-handle:hover::after,
@@ -373,7 +715,7 @@
     align-items: center;
     gap: 0.75rem;
     padding: 0.5rem 0.75rem 0.5rem 1rem;
-    border-bottom: 1px solid var(--color-border);
+    border-bottom: var(--border-w) var(--border-style) var(--color-border);
     background-color: var(--color-surface);
     color: var(--color-fg-muted);
     font-size: 11px;
@@ -393,10 +735,115 @@
     color: var(--color-fg);
   }
 
-  .term-hint {
+  /* Text size. Sits before the dock controls and stays on narrow screens,
+     where being able to shrink the scrollback matters more than on a desktop —
+     unlike the dock glyphs, which are hidden there because a side dock is not
+     offered at that width anyway. */
+  .term-font {
+    display: flex;
+    gap: 0.15rem;
     margin-left: auto;
+  }
+
+  /* --color-fg-muted, not --color-fg-subtle: these are labels a visitor reads.
+     Subtle measures 3.03:1 on the panel's surface, and its own comment says it
+     is not AA-safe for text. */
+  .term-font button {
+    display: inline-flex;
+    min-width: 1.75rem;
+    min-height: 1.75rem;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: var(--radius);
+    background: none;
+    color: var(--color-fg-muted);
+    font-family: inherit;
+    /* Fixed: the chrome must not scale with the thing it is scaling. */
+    font-size: 11px;
+    cursor: pointer;
+    transition: color 150ms ease;
+  }
+
+  .term-font button:hover:not(:disabled),
+  .term-font button:focus-visible:not(:disabled) {
+    color: var(--color-fg);
+  }
+
+  .term-font button:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  /* Dock controls. Three glyphs drawn in CSS rather than shipped as icons —
+     each is a rectangle with one thick edge, so the row reads as a small map of
+     where the panel can sit. */
+  .term-docks {
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  .term-dock {
+    display: inline-flex;
+    min-width: 1.75rem;
+    min-height: 1.75rem;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: var(--radius);
+    background: none;
+    color: var(--color-fg-subtle);
+    cursor: pointer;
+    transition: color 150ms ease;
+  }
+
+  .term-dock:hover,
+  .term-dock:focus-visible {
+    color: var(--color-fg);
+  }
+
+  .term-dock[aria-pressed='true'] {
+    color: var(--color-accent);
+  }
+
+  .term-dock-glyph {
+    width: 13px;
+    height: 11px;
+    border: 1px solid currentColor;
+    border-radius: 1px;
+  }
+
+  .term-dock[data-dock-btn='left'] .term-dock-glyph {
+    border-left-width: 4px;
+  }
+
+  .term-dock[data-dock-btn='right'] .term-dock-glyph {
+    border-right-width: 4px;
+  }
+
+  .term-dock[data-dock-btn='bottom'] .term-dock-glyph {
+    border-bottom-width: 4px;
+  }
+
+  /* A side dock is not offered where it would leave no usable page; the island
+     forces the bottom dock at the same width (SIDE_MIN_VIEWPORT in dock.ts). */
+  @media (width < 40rem) {
+    .term-docks {
+      display: none;
+    }
+  }
+
+  .term-hint {
     color: var(--color-fg-muted);
     letter-spacing: 0.06em;
+  }
+
+  /* The hint is the first thing to go when the bar runs out of room — the dock
+     controls do something, and this only restates what Esc already does. */
+  @media (width < 52rem) {
+    .term-hint {
+      display: none;
+    }
   }
 
   .term-close {
@@ -406,7 +853,7 @@
     align-items: center;
     justify-content: center;
     border: 0;
-    border-radius: 2px;
+    border-radius: var(--radius);
     background: none;
     color: var(--color-fg-muted);
     cursor: pointer;
@@ -432,8 +879,6 @@
     /* The empty area below the last line focuses the input, like a real
        terminal, so the whole panel behaves as one click target. */
     cursor: text;
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border-strong) transparent;
   }
 
   .term-line {
@@ -510,354 +955,34 @@
 }
 
 /* ---------------------------------------------------------------------------
-   API simulation.
+   Permission sandbox.
 
    Global rather than scoped because the markup exists twice: once as static
-   HTML in ApiSim.astro (what ships) and once rendered by the Preact island
-   (what takes over on first click). Scoped styles would only reach the first.
-   Keeping them identical is what makes the swap invisible.
+   HTML in Access.astro (what ships, with answers computed at build time) and
+   once rendered by the Preact island (what takes over on first click). Scoped
+   styles would only reach the first, and the swap has to be invisible.
    --------------------------------------------------------------------------- */
 @layer components {
-  .api {
+  .ax {
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
-    max-width: 34rem;
+    max-width: 42rem;
   }
 
-  .api-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 1rem;
-  }
-
-  .api-fetch {
-    display: inline-flex;
-    min-height: 2.75rem;
-    align-items: center;
-    gap: 0.6ch;
-    padding-inline: 1rem;
-    border: 1px solid var(--color-border);
-    border-radius: 3px;
-    background-color: var(--color-bg);
-    font-family: var(--font-mono);
-    font-size: 13px;
-    color: var(--color-fg);
-    cursor: pointer;
-    transition:
-      border-color 150ms ease,
-      color 150ms ease;
-  }
-
-  .api-fetch:hover:not(:disabled) {
-    border-color: var(--color-accent-dim);
-  }
-
-  .api-fetch:disabled {
-    cursor: not-allowed;
-    color: var(--color-fg-muted);
-  }
-
-  .api-verb {
-    color: var(--color-accent);
-  }
-
-  .api-status {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--color-fg-muted);
-  }
-
-  /* One accent, so health is signalled by the colour draining away rather than
-     by introducing a red the palette does not have. A dead grey dot on a site
-     that is green everywhere else reads as wrong, which is the point. */
-  .api-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: var(--color-accent);
-    transition: background-color 200ms ease;
-  }
-
-  .api-dot.is-strained {
-    background-color: var(--color-accent-dim);
-  }
-
-  .api-dot.is-crashed,
-  .api-dot.is-recovering {
-    background-color: var(--color-fg-subtle);
-  }
-
-  .api-gauge-track {
-    height: 3px;
-    background-color: var(--color-border);
-    border-radius: 2px;
-    overflow: hidden;
-  }
-
-  .api-gauge-fill {
-    height: 100%;
-    background-color: var(--color-accent);
-    /* Short and purposeful; it tracks a value, it does not animate idly. */
-    transition:
-      width 120ms linear,
-      background-color 200ms ease;
-  }
-
-  .api-gauge-fill.is-strained {
-    background-color: var(--color-accent-dim);
-  }
-
-  .api-gauge-fill.is-crashed,
-  .api-gauge-fill.is-recovering {
-    background-color: var(--color-fg-subtle);
-  }
-
-  .api-gauge-meta {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 0.5rem;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--color-fg-muted);
-  }
-
-  .api-totals {
-    display: flex;
-    gap: 2rem;
-    margin: 0;
-  }
-
-  .api-totals dt {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--color-fg-muted);
-  }
-
-  .api-totals dd {
-    margin: 0.15rem 0 0;
-    font-family: var(--font-mono);
-    font-size: 18px;
-    color: var(--color-fg);
-    font-variant-numeric: tabular-nums;
-  }
-
-  .api-log {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--color-fg-muted);
-  }
-
-  .api-log li {
-    display: flex;
-    gap: 1.5ch;
-  }
-
-  .api-log li.is-failed .api-log-status {
-    color: var(--color-fg);
-  }
-
-  .api-log-status {
-    color: var(--color-accent-soft);
-  }
-
-  .api-log-id,
-  .api-log-latency {
-    font-variant-numeric: tabular-nums;
-  }
-
-  /* Marks a row answered from memory. The status is still 200, so the tag is
-     what distinguishes "we did the work" from "we already had it". */
-  .api-log-tag {
-    color: var(--color-accent-soft);
-  }
-
-  /* Time spent in the line is a cost, not a win — so it does not get the accent
-     that marks a response the cache saved. */
-  .api-log-tag.is-wait {
-    color: var(--color-fg-muted);
-  }
-
-  .api-note {
-    max-width: 34rem;
-    margin: 0;
-    font-size: 13px;
-    line-height: 1.6;
-    color: var(--color-fg-muted);
-    border-left: 1px solid var(--color-border-strong);
-    padding-left: 0.85rem;
-  }
-}
-
-/* --- API simulation: the defence chain and the inline fix offer ------------ */
-@layer components {
-  .api-chain {
+  .ax-roles {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.75rem;
   }
 
-  .api-chain ol {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--color-accent);
-  }
-
-  /* Arrows between links, never before the first — the chain reads as a
-     pipeline the visitor assembled. */
-  .api-chain li + li::before {
-    content: '→';
-    margin-right: 0.5rem;
-    color: var(--color-fg-muted);
-  }
-
-  .api-reset {
-    margin-left: auto;
-    border: 0;
-    background: none;
-    padding: 0;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--color-fg-muted);
-    cursor: pointer;
-    text-decoration: underline;
-    text-underline-offset: 3px;
-    text-decoration-color: var(--color-border);
-    transition: color 150ms ease;
-  }
-
-  .api-reset:hover {
-    color: var(--color-fg);
-  }
-
-  .api-fixbox {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    max-width: 34rem;
-  }
-
-  .api-offer {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.75rem;
-    margin: 0;
-  }
-
-  .api-apply {
-    display: inline-flex;
-    min-height: 2.25rem;
-    align-items: center;
-    padding-inline: 0.85rem;
-    border: 1px solid var(--color-accent-dim);
-    border-radius: 3px;
-    background-color: var(--color-bg);
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--color-accent);
-    cursor: pointer;
-    transition:
-      background-color 150ms ease,
-      color 150ms ease;
-  }
-
-  .api-apply:hover {
-    background-color: var(--color-accent-faint);
-  }
-
-  .api-apply-blurb {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--color-fg-muted);
-  }
-}
-
-/* --- API simulation: the hidden bug icon and defect report ----------------- */
-@layer components {
-  /* Groups the icon with the button it hangs off, tighter than the row's own
-     gap, so it reads as tucked against the button rather than as a second
-     control sitting beside it. */
-  .api-launch {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-  }
-
-  /* Faint on purpose: found by looking, not by glancing. It is still a real
-     button — 28px square (above the 24px target floor), in the tab order, and
-     brought to full strength the moment it is hovered or focused, so nobody
-     navigating by keyboard has to hunt for something they cannot see. */
-  .api-bug {
-    display: inline-flex;
-    width: 1.75rem;
-    height: 1.75rem;
-    align-items: center;
-    justify-content: center;
-    border: 0;
-    background: none;
-    padding: 0;
-    color: var(--color-fg-muted);
-    opacity: 0.3;
-    cursor: pointer;
-    transition:
-      opacity 200ms ease,
-      color 200ms ease;
-  }
-
-  /* The earned nudge. Once a rate limiter is in place this icon is the only way
-     forward, so a visitor who is clearly attacking and getting nowhere gets it
-     made easier to see. A one-time step change, never a loop — nothing on this
-     site pulses for attention. */
-  .api-bug.is-nudged-1 {
-    opacity: 0.55;
-  }
-
-  .api-bug.is-nudged-2 {
-    opacity: 0.85;
-  }
-
-  /* Settled: found already, so it no longer needs to hide or to shout. */
-  .api-bug.is-found {
-    opacity: 0.7;
-  }
-
-  .api-bug:hover,
-  .api-bug:focus-visible,
-  .api-bug[aria-expanded='true'] {
-    opacity: 1;
-    color: var(--color-accent);
-  }
-
-  .api-bugs {
-    max-width: 34rem;
-    border: 1px solid var(--color-border);
-    border-radius: 3px;
-    padding: 0.85rem 1rem;
-  }
-
-  .api-bugs-title {
-    margin: 0;
+  /* --color-fg-muted, not --color-fg-subtle. Both are labels a visitor reads,
+     not decorative marks, and subtle measures 3.19:1 — the token's own comment
+     says it is not AA-safe for text. Caught by Lighthouse, which is the only
+     reason it was found: the palette tests check the *tokens*, and nothing
+     checked which token a given piece of text had been given. */
+  .ax-you {
     font-family: var(--font-mono);
     font-size: 10px;
     letter-spacing: 0.08em;
@@ -865,171 +990,989 @@
     color: var(--color-fg-muted);
   }
 
-  .api-bugs ol {
+  .ax-choices {
     display: flex;
-    flex-direction: column;
-    gap: 0.7rem;
-    margin: 0.75rem 0 0;
-    padding: 0;
-    list-style: none;
+    gap: 0.25rem;
   }
 
-  /* A grid rather than a wrapping flex row: the plain-language titles are long
-     enough to wrap, and with flex that dragged `open` / `patched` down onto a
-     second line at an arbitrary position. Explicit placement keeps the state
-     flush right on the first line whatever the title does, and drops the
-     technical tag onto its own row underneath. */
-  .api-defect-head {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    column-gap: 0.6rem;
-    row-gap: 0.3rem;
-    align-items: baseline;
-    margin: 0;
+  /* Same chip language as the palette control, so the site has one way of
+     asking "pick one of these". */
+  .ax-role span {
+    display: inline-flex;
+    min-height: 2.25rem;
+    align-items: center;
+    padding-inline: 0.7rem;
+    border: var(--border-w) var(--border-style) var(--color-border);
+    border-radius: var(--radius);
     font-family: var(--font-mono);
     font-size: 11px;
+    color: var(--color-fg-muted);
+    cursor: pointer;
+    transition:
+      color 150ms ease,
+      border-color 150ms ease;
+  }
+
+  .ax-role span:hover {
     color: var(--color-fg);
   }
 
-  .api-defect-id {
-    grid-area: 1 / 1;
+  .ax-role input:checked + span {
+    color: var(--color-accent);
+    border-color: var(--color-accent-dim);
+  }
+
+  .ax-role input:focus-visible + span {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  .ax-action {
+    color: var(--color-fg);
+  }
+
+  .ax-verdict {
     color: var(--color-fg-muted);
   }
 
-  .api-defect-title {
-    grid-area: 1 / 2;
+  /* One accent, so a grant reads as the site's own colour and a refusal simply
+     drains — no red the palette does not have, and nothing that would break
+     under a recoloured theme. */
+  .ax-row.is-allowed .ax-verdict {
+    color: var(--color-accent-soft);
   }
 
-  .api-defect-state {
-    grid-area: 1 / 3;
+  .ax-reason {
+    color: var(--color-fg-muted);
+    line-height: 1.5;
+  }
+
+  .ax-trace {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin: 0.15rem 0 0.5rem 0.4rem;
+    padding-left: 0.85rem;
+    border-left: var(--border-w) var(--border-style) var(--color-border-strong);
+  }
+
+  .ax-trace pre {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    line-height: 1.6;
+    color: var(--color-fg-muted);
+    white-space: pre-wrap;
+  }
+
+  /* The jargon, dim and secondary — the row above already said it in English. */
+  .ax-term {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 0.1rem 0.4rem;
+    border: var(--border-w) var(--border-style) var(--color-border);
+    border-radius: var(--radius);
+    color: var(--color-fg-muted);
+  }
+
+  @media (width <= 34rem) {
+    .ax-row {
+      grid-template-columns: minmax(0, 1fr) 5rem;
+    }
+
+    .ax-reason {
+      grid-column: 1 / -1;
+    }
+  }
+}
+
+/* --- Permission sandbox: policy toggles and findings ----------------------- */
+@layer components {
+  .ax-policy {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.75rem;
+  }
+
+  .ax-wrap {
+    flex-wrap: wrap;
+  }
+
+  /* Checkboxes wearing the same chip as the role radios — one visual language
+     for "pick", whether it is one of a set or several at once. */
+  .ax-toggle span {
+    display: inline-flex;
+    min-height: 1.9rem;
+    align-items: center;
+    padding-inline: 0.6rem;
+    border: 1px dashed var(--color-border-strong);
+    border-radius: var(--radius);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-fg-muted);
+    cursor: pointer;
+    transition:
+      color 150ms ease,
+      border-color 150ms ease;
+  }
+
+  .ax-toggle span:hover {
+    color: var(--color-fg);
+  }
+
+  /* Solid once applied: a rule that is actually in force should not look like
+     a suggestion. */
+  .ax-toggle input:checked + span {
+    border-style: solid;
+    border-color: var(--color-accent-dim);
     color: var(--color-accent);
   }
 
-  .api-defect-term {
-    grid-area: 2 / 2;
-    justify-self: start;
+  .ax-toggle input:focus-visible + span {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
   }
 
-  /* Narrow screens cannot afford three columns — the title column collapses to
-     a few characters wide. Stack instead. */
-  @media (width <= 30rem) {
-    .api-defect-head {
-      grid-template-columns: auto minmax(0, 1fr);
-    }
-
-    .api-defect-state {
-      grid-area: 2 / 2;
-    }
-
-    .api-defect-term {
-      grid-area: 3 / 2;
-    }
+  .ax-reset {
+    align-self: center;
+    border: 0;
+    background: none;
+    padding: 0 0.25rem;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--color-fg-muted);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--color-border-strong);
+    transition: color 150ms ease;
   }
 
-  .api-defect-hint {
-    margin: 0.35rem 0 0;
+  .ax-reset:hover {
+    color: var(--color-fg);
+  }
+
+  /* Stated plainly, not alarmingly. The palette has one accent and no red, and
+     a finding reads as more serious for being calm about it. */
+  .ax-finding {
+    max-width: 42rem;
+    border-left: var(--border-w) var(--border-style) var(--color-accent-dim);
+    padding: 0.1rem 0 0.1rem 0.85rem;
+  }
+
+  .ax-finding-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.6rem;
+    margin: 0;
+  }
+
+  .ax-finding-title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-accent);
+  }
+
+  .ax-finding-body {
+    margin: 0.3rem 0 0;
     font-family: var(--font-mono);
     font-size: 11px;
     line-height: 1.55;
     color: var(--color-fg-muted);
   }
-
-  /* Patched entries stay put, struck through — the panel is a changelog of what
-     the visitor has hardened, not a list that quietly shrinks. The exploit line
-     goes, because it no longer works. */
-  .api-defect.is-patched .api-defect-title {
-    color: var(--color-fg-muted);
-    text-decoration: line-through;
-    text-decoration-color: var(--color-border);
-  }
-
-  .api-defect.is-patched .api-defect-state {
-    color: var(--color-fg-muted);
-  }
-
-  .api-defect.is-patched .api-defect-hint {
-    display: none;
-  }
 }
 
-/* --- API simulation: the attack toolkit ------------------------------------ */
+/* --- Permission sandbox: scenarios, requirements and the editor ------------ */
 @layer components {
-  .api-defect-run {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.75rem;
-    margin: 0.6rem 0 0;
+  .ax-brief {
+    max-width: 42rem;
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--color-fg);
   }
 
-  /* Deliberately reads as the opposite of `.api-apply`: the fix button is the
-     accent colour because building something is the good outcome, so the attack
-     button is the plain one. Both are the same size and shape — the two halves
-     of the loop, not a primary and a secondary action. */
-  .api-run {
-    display: inline-flex;
-    min-height: 2rem;
-    align-items: center;
-    padding-inline: 0.75rem;
-    border: 1px solid var(--color-border-strong);
-    border-radius: 3px;
-    background-color: var(--color-bg);
+  .ax-reqs {
+    display: grid;
+    gap: 0.75rem 2.5rem;
+  }
+
+  /* Two columns from 23rem, not 34rem. Reading "must be able to" beside "must
+     not" is the comparison the section is built on, so the pairing is worth
+     keeping on a phone rather than stacking one list under the other.
+     23rem is measured, not chosen: the longest label sits on one line down to
+     364px, and below that three of the four wrap to two lines — at which point
+     the columns cost more than the pairing buys. */
+  @media (width >= 23rem) {
+    .ax-reqs {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  .ax-req-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.6rem;
+    margin: 0 0 0.35rem;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    /* See .ax-you above: subtle is 3.19:1 and not for real text. */
+    color: var(--color-fg-muted);
+  }
+
+  .ax-req {
+    display: grid;
+    grid-template-columns: 1.2ch minmax(0, 1fr);
+    align-items: baseline;
+    gap: 0.15rem 0.6rem;
+    padding: 0.15rem 0;
     font-family: var(--font-mono);
     font-size: 11px;
     color: var(--color-fg);
-    cursor: pointer;
-    transition:
-      border-color 150ms ease,
-      color 150ms ease;
   }
 
-  .api-run:hover:not(:disabled) {
-    border-color: var(--color-accent-dim);
+  /* A dot until the visitor asks. Checking is a commitment, so the answer is
+     absent rather than pre-empted — and an edit puts the dots back. */
+  .ax-req-mark {
+    color: var(--color-fg-subtle);
+  }
+
+  .ax-req:has(.is-missed) .ax-req-mark {
+    color: var(--color-fg);
+  }
+
+  /* A limit the brief withheld. Dim and monospaced-even, so a column of them
+     reads as "three things to work out" rather than as missing content. */
+  .ax-req-label.is-unknown {
+    color: var(--color-fg-subtle);
+    letter-spacing: 0.15em;
+  }
+
+  .ax-req .ax-reason {
+    grid-column: 2;
+  }
+
+  .ax-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding-top: 0.75rem;
+    border-top: var(--border-w) var(--border-style) var(--color-border);
+  }
+
+  .ax-check {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.9rem;
+  }
+
+  .ax-run {
+    display: inline-flex;
+    min-height: 2.25rem;
+    align-items: center;
+    padding-inline: 1rem;
+    border: var(--border-w) var(--border-style) var(--color-accent-dim);
+    border-radius: var(--radius-lg);
+    background-color: var(--color-bg);
+    font-family: var(--font-mono);
+    font-size: 12px;
     color: var(--color-accent);
+    cursor: pointer;
+    transition: background-color 150ms ease;
   }
 
-  .api-run:disabled {
-    cursor: not-allowed;
-    color: var(--color-fg-muted);
-    border-color: var(--color-border);
+  .ax-run:hover {
+    background-color: var(--color-accent-faint);
   }
 
-  .api-run-status {
+  .ax-grade {
     font-family: var(--font-mono);
     font-size: 11px;
     color: var(--color-fg-muted);
-    font-variant-numeric: tabular-nums;
+  }
+
+  .ax-grade.is-solved {
+    color: var(--color-accent-soft);
   }
 }
 
-/* --- API simulation: plain language first, jargon as a tag ----------------- */
+/* --- Permission sandbox: the shared control row and the scoping condition -- */
 @layer components {
-  /* Status codes and technical names sit beside the plain wording rather than
-     replacing it. Dim and small: an engineer reads them, everyone else reads
-     past them. `--color-fg-subtle` is not eligible here — these are real text,
-     so they stay on `--color-fg-muted` (6.0:1) per the token note above. */
-  .api-code,
-  .api-defect-term {
-    font-family: var(--font-mono);
-    color: var(--color-fg-muted);
-    font-variant-numeric: tabular-nums;
+  /* Label above chips on a phone, beside them from sm up.
+     Inline labels do not form a column — "level" is 34px and "deploy keys" is
+     75px — so every group started at a different x and the whole block read as
+     accidental. Stacking removes the ragged edge and hands the chips the full
+     width, which also costs fewer wrapped rows than it adds. */
+  .ax-ask-line {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
   }
 
-  .api-code {
-    margin-left: 0.5ch;
-    font-size: 0.85em;
-    letter-spacing: 0;
-    text-transform: none;
+  /* A grid from sm up, not a wrapping row. With flex, a long chip set pushes
+     itself onto the next line and starts at the container edge while shorter
+     ones sit beside their label — two different left edges in the same block.
+     Two columns give every group the same one. */
+  @media (width >= 34rem) {
+    .ax-ask-line {
+      display: grid;
+      grid-template-columns: 5.5rem minmax(0, 1fr);
+      align-items: baseline;
+      gap: 0.5rem 0.75rem;
+    }
   }
 
-  .api-defect-term {
-    font-size: 10px;
-    padding: 0.1rem 0.4rem;
-    border: 1px solid var(--color-border);
-    border-radius: 2px;
+  /* A condition on the grants beside it, not another grant — so it reads as a
+     modifier rather than a fourth permission. */
+  .ax-toggle.is-condition span {
+    margin-left: 0.5rem;
+    font-style: italic;
   }
 
-  .api-defect.is-patched .api-defect-term {
-    opacity: 0.6;
+  .ax-toggle.is-condition input:checked + span {
+    font-style: normal;
   }
+}
+
+/* --- Permission sandbox: phone density ------------------------------------ */
+@media (width < 34rem) {
+  @layer components {
+    /* Slightly tighter chips and rhythm. Everything stays above the 24px tap
+       target floor — 28px high with 10px of side padding. */
+    .ax-role span,
+    .ax-toggle span {
+      min-height: 1.75rem;
+      padding-inline: 0.5rem;
+      font-size: 10px;
+    }
+
+    .ax {
+      gap: 0.9rem;
+    }
+
+    .ax-editor {
+      gap: 0.6rem;
+      padding-top: 0.6rem;
+    }
+
+    .ax-reqs {
+      gap: 0.6rem;
+    }
+
+    /* Narrower mark gutter buys ~10px per column — the difference between the
+       longest requirement fitting on one line at 375px and not. */
+    .ax-req {
+      grid-template-columns: 1ch minmax(0, 1fr);
+      gap: 0.1rem 0.35rem;
+    }
+
+    .ax-brief {
+      font-size: 11px;
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Unlock notices.
+
+   Created on demand by whichever island awarded the achievement, so this costs
+   the recruiter path nothing and a visitor who never opens anything never sees
+   one.
+
+   Stacked just above the door, which is deliberate: the notice gestures at
+   where the door is without linking to it, so finding it stays the achievement
+   it is. One fade in, a hold, one fade out — nothing loops and nothing flashes
+   (CLAUDE.md).
+   --------------------------------------------------------------------------- */
+.ac-notices {
+  position: fixed;
+  left: 1rem;
+  bottom: 4.25rem;
+  z-index: 70;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.4rem;
+  /* Never intercepts a click — it is an aside, not a control. */
+  pointer-events: none;
+}
+
+/* A card, not a line.
+   
+   The first version was one small mono line, which on a page this quiet was
+   easy to miss entirely — the whole point is that something visibly happened.
+   An icon, a kicker, the name and what you did give it enough weight to catch
+   the eye without becoming a modal. */
+.ac-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  max-width: min(20rem, calc(100vw - 2rem));
+  padding: 0.7rem 0.9rem 0.75rem;
+  border: var(--border-w) var(--border-style) var(--color-accent-dim);
+  border-left-width: 3px;
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+  box-shadow: 0 12px 32px -12px var(--shadow-color);
+  /* Animated on insert rather than transitioned from a JS-set attribute: rAF is
+     paused in a backgrounded tab, so a transition trigger meant an achievement
+     earned while the tab was unfocused produced a notice nobody ever saw. */
+  animation: ac-notice-in 260ms ease both;
+}
+
+.ac-notice[data-leaving] {
+  animation: ac-notice-out 240ms ease both;
+}
+
+@keyframes ac-notice-in {
+  from {
+    opacity: 0;
+    /* A short rise from the corner it belongs to, not a slide across the page. */
+    transform: translateY(0.5rem) scale(0.98);
+  }
+}
+
+@keyframes ac-notice-out {
+  to {
+    opacity: 0;
+    transform: translateY(0.25rem);
+  }
+}
+
+.ac-notice-mark {
+  display: inline-flex;
+  padding-top: 0.1rem;
+  color: var(--color-accent);
+}
+
+.ac-notice-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.ac-notice-kicker {
+  margin: 0;
+  color: var(--color-accent-soft);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.ac-notice-title {
+  margin: 0;
+  color: var(--color-fg);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.ac-notice-moment {
+  margin: 0;
+  color: var(--color-fg-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+/* ---------------------------------------------------------------------------
+   The achievements panel.
+
+   The third corner control, and what replaced the /achievements route. It
+   stacks above the door it belongs to, in the corner opposite the terminal and
+   source-view controls.
+
+   Everything here is created at runtime by src/islands/achievements/panel.ts,
+   so none of it costs the recruiter path anything — but it lives in the global
+   stylesheet rather than in the chunk because an island cannot carry Astro
+   scoped styles, and injecting a <style> from JavaScript is a worse version of
+   the same thing.
+
+   It is non-modal: no backdrop, no scrim, nothing inert behind it. The terminal
+   stays usable beside it on purpose — watching a row tick over while you work
+   is the best moment this feature has.
+   --------------------------------------------------------------------------- */
+.ac-panel {
+  position: fixed;
+  left: 1rem;
+  bottom: 4.25rem;
+  z-index: 60;
+  display: none;
+  width: min(25rem, calc(100vw - 2rem));
+  /* Bounded so it can never swallow the page, and scrolls inside instead. The
+     bottom offset is subtracted twice: once for the door below it, once so it
+     never reaches the top edge. */
+  max-height: min(32rem, calc(100dvh - 6.5rem));
+  flex-direction: column;
+  border: var(--border-w) var(--border-style) var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+  box-shadow: 0 16px 40px -12px var(--shadow-color);
+}
+
+.ac-panel[data-open] {
+  display: flex;
+  animation: ac-panel-in 180ms ease both;
+}
+
+/* Same reasoning as the unlock notice: an animation on insert plays whenever
+   the tab is painted, where a JS-triggered transition would not. */
+@keyframes ac-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.4rem) scale(0.99);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ac-panel[data-open] {
+    animation: none;
+  }
+}
+
+.ac-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 1rem 1.15rem 0.6rem;
+}
+
+.ac-panel-title {
+  margin: 0;
+  color: var(--color-fg-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ac-panel-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Small mark, full target (WCAG 2.5.8). Pulled tight against the corner so
+     the padding does not push the heading off-centre. */
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  margin: -0.35rem -0.35rem -0.35rem 0;
+  border: none;
+  background: none;
+  color: var(--color-fg-subtle);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.ac-panel-close:hover,
+.ac-panel-close:focus-visible {
+  color: var(--color-fg);
+}
+
+.ac-panel-intro {
+  margin: 0;
+  padding: 0 1.15rem;
+  color: var(--color-fg-subtle);
+  font-size: 12px;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.ac-panel .ac-progress {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.85rem;
+  padding: 1.15rem 1.15rem 1rem;
+}
+
+.ac-panel .ac-pips {
+  display: flex;
+  gap: 0.38rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A found one fills in. Size and fill as well as colour, so the row of pips
+   still reads without relying on hue (WCAG 1.4.1). */
+.ac-panel .ac-pip {
+  width: 0.4rem;
+  height: 0.4rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 50%;
+}
+
+.ac-panel .ac-pip[data-found] {
+  border-color: var(--color-accent);
+  background-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-faint);
+}
+
+.ac-panel .ac-count {
+  margin: 0;
+  color: var(--color-fg-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+.ac-panel .ac-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  /* The right inset is smaller so the scrollbar sits in the gap rather than
+     over the text, now that the list has a visible one. */
+  padding: 0 0.65rem 0 1.15rem;
+  list-style: none;
+  overflow-y: auto;
+  /* Stops the wheel chaining to the page at either end of the list — the same
+     containment the terminal's scrollback needs, for the same reason. */
+  overscroll-behavior: contain;
+}
+
+/* Two lines per row. A title and its description side by side in one mono size
+   read as an undifferentiated block, with nothing marking where a row began. */
+.ac-panel .ac-row {
+  display: grid;
+  grid-template-columns: 1.35rem minmax(0, 1fr);
+  align-items: start;
+  gap: 0.25rem 0.7rem;
+  padding-block: 0.8rem;
+  border-bottom: var(--border-w) var(--border-style) var(--color-border);
+}
+
+.ac-panel .ac-row:last-child {
+  border-bottom: none;
+}
+
+.ac-panel .ac-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 0.1rem;
+  color: var(--color-fg-subtle);
+}
+
+/* One of the two marks shows at a time. The glyph differs as well as the
+   colour, so earned state never rests on hue alone. */
+.ac-panel .ac-mark svg:first-child {
+  display: block;
+}
+
+.ac-panel .ac-mark svg:last-child {
+  display: none;
+}
+
+.ac-panel .ac-row[data-earned] .ac-mark {
+  color: var(--color-accent);
+}
+
+.ac-panel .ac-row[data-earned] .ac-mark svg:first-child {
+  display: none;
+}
+
+.ac-panel .ac-row[data-earned] .ac-mark svg:last-child {
+  display: block;
+}
+
+.ac-panel .ac-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.ac-panel .ac-label {
+  color: var(--color-fg-muted);
+  font-size: 13.5px;
+  line-height: 1.35;
+}
+
+.ac-panel .ac-moment {
+  color: var(--color-fg-subtle);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+/* Found: the title comes forward. Everything stays legible either way — the
+   list is a checklist of what is left, not a wall of mystery. */
+.ac-panel .ac-row[data-earned] .ac-label {
+  color: var(--color-fg);
+}
+
+.ac-panel .ac-row[data-earned] .ac-moment {
+  color: var(--color-fg-muted);
+}
+
+.ac-panel-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1.15rem 0.9rem;
+  border-top: var(--border-w) var(--border-style) var(--color-border);
+}
+
+.ac-panel-note {
+  margin: 0;
+  color: var(--color-fg-subtle);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+/* Deliberately the quietest control in the panel. It destroys something the
+   visitor built, so it should never be the thing the eye lands on — and it
+   asks once before doing it (see resetControl in panel.ts). */
+.ac-reset {
+  flex-shrink: 0;
+  padding: 0.3rem 0.55rem;
+  border: var(--border-w) var(--border-style) var(--color-border);
+  border-radius: var(--radius);
+  background: none;
+  color: var(--color-fg-subtle);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color 150ms ease,
+    border-color 150ms ease;
+}
+
+.ac-reset:hover,
+.ac-reset:focus-visible {
+  color: var(--color-fg-muted);
+  border-color: var(--color-border-strong);
+}
+
+/* Armed. The only warm colour in the panel, and it lasts four seconds. */
+.ac-reset[data-armed] {
+  color: var(--color-fg);
+  border-color: var(--color-fg-subtle);
+}
+
+/* ---------------------------------------------------------------------------
+   The door — the achievements toggle.
+
+   Opposite corner to the terminal and source-view controls, so the two visible
+   affordances stay together and this one does not read as a third button in a
+   row. Barely visible by default and fully visible on hover or focus — findable
+   by looking, not by being told.
+
+   It is an anchor and nothing else. No script reads whether anything has been
+   earned: doing that here would put content JavaScript on the recruiter path,
+   which is the one thing the whole flag design exists to avoid.
+   --------------------------------------------------------------------------- */
+.door {
+  position: fixed;
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 50;
+  display: inline-flex;
+  cursor: pointer;
+  /* Same box as the terminal and source-view controls opposite, so it reads as
+     one of the set. Full tap target regardless of the mark inside (WCAG 2.5.8). */
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border: var(--border-w) var(--border-style) var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-bg);
+  color: var(--color-fg-muted);
+  /* Dimmer than its counterparts across the page: still meant to be found
+     rather than offered. Not zero — invisible is not the same as unobtrusive,
+     and an icon nobody can find is a feature that does not exist. */
+  opacity: 0.22;
+  transition:
+    opacity 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease;
+}
+
+.door:hover,
+.door:focus-visible,
+.door[aria-expanded='true'] {
+  opacity: 1;
+  color: var(--color-accent);
+  border-color: var(--color-accent-dim);
+}
+
+/* A visitor who has asked for less motion still gets the reveal, just without
+   the fade — the opacity change is the affordance, not decoration. */
+@media (prefers-reduced-motion: reduce) {
+  .door {
+    transition: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Terminal docking — the page's half of it.
+
+   The island publishes two things to :root and nothing else: `data-dock` (which
+   edge) and the size, as --dock-w / --dock-h. Every consequence below is a
+   stylesheet rule keyed off those, which is what kept the whole feature a
+   matter of attributes rather than a second layout engine in JavaScript.
+
+   The page always gives way to the panel. An overlay mode was built so the two
+   could be compared and removed once push won — on a side dock overlay covered
+   the hero, and at the bottom the two were nearly indistinguishable because the
+   page already scrolls behind the panel.
+
+   All of it is gated on [data-term-open], set by mount.tsx, so closing the
+   panel puts the page back without the component unwinding anything.
+   --------------------------------------------------------------------------- */
+:root {
+  --dock-w: 0px;
+  --dock-h: 0px;
+}
+
+/* Push: the page gives way, the way an editor's does. */
+:root[data-term-open][data-dock='left'] body {
+  padding-left: var(--dock-w);
+}
+
+:root[data-term-open][data-dock='right'] body {
+  padding-right: var(--dock-w);
+}
+
+/* The bottom dock gains least from this, because the page already scrolls
+   behind the panel — what it actually buys is being able to scroll the last
+   section clear of it, which the scroll-padding is there for. */
+:root[data-term-open][data-dock='bottom'] body {
+  padding-bottom: var(--dock-h);
+}
+
+:root[data-term-open][data-dock='bottom'] {
+  scroll-padding-bottom: calc(var(--dock-h) + 1rem);
+}
+
+/* Only a side dock narrows the content box, so only that case feeds the
+   gutter. */
+:root[data-term-open][data-dock='left'],
+:root[data-term-open][data-dock='right'] {
+  --dock-push-w: var(--dock-w);
+}
+
+/* Lit while the panel is open, like the source-view control opposite and the
+   achievements door across the page.
+
+   It lives here rather than in TerminalLoader.astro's scoped block because
+   every other rule that styles this button from outside the component — the
+   dock offsets below — is already in this file, and a state driven by an
+   attribute on <html> belongs with them rather than behind a `:global()`.
+
+   Keyed on the root attribute, not on `aria-expanded`, so it is right no matter
+   what opened the panel — the button, ⌘K, `open <section>`, or `Esc` — and
+   needs no JavaScript to stay in step. `aria-expanded` is maintained separately
+   in mount.tsx for assistive tech. */
+:root[data-term-open] .terminal-open {
+  color: var(--color-accent);
+  border-color: var(--color-accent-dim);
+}
+
+/* The two corner controls are position: fixed, so body padding does not move
+   them and a right-hand dock would slide underneath. The page beside the panel
+   is meant to stay usable, so they step aside. */
+:root[data-term-open][data-dock='right'] .source-toggle,
+:root[data-term-open][data-dock='right'] .terminal-open {
+  right: calc(1rem + var(--dock-w));
+}
+
+/* The same for the other corner, which had no such rule and needed one: a
+   left-docked terminal slid underneath the door, the unlock notices and the
+   achievements panel. Only noticed once the panel moved into that corner —
+   before that the door was a 44px square that happened to sit on top. */
+:root[data-term-open][data-dock='left'] .door,
+:root[data-term-open][data-dock='left'] .ac-notices,
+:root[data-term-open][data-dock='left'] .ac-panel {
+  left: calc(1rem + var(--dock-w));
+}
+
+/* A bottom dock covers that corner outright, so the stack rides above it.
+   
+   This applies to all four fixed controls, not just the door. Only the *right*
+   dock had a rule before, which meant a bottom-docked terminal — the default —
+   drew itself straight over its own open button and the source-view toggle. The
+   terminal could be opened by the button and then only closed with `Esc` or the
+   panel's own control, because the button it came from was underneath the
+   panel. Found while making that button a toggle: a toggle you cannot see or
+   reach is not one. */
+:root[data-term-open][data-dock='bottom'] .door {
+  bottom: calc(1rem + var(--dock-h));
+}
+
+:root[data-term-open][data-dock='bottom'] .source-toggle {
+  bottom: calc(1rem + var(--dock-h));
+}
+
+:root[data-term-open][data-dock='bottom'] .terminal-open {
+  bottom: calc(4.5rem + var(--dock-h));
+}
+
+:root[data-term-open][data-dock='bottom'] .ac-notices,
+:root[data-term-open][data-dock='bottom'] .ac-panel {
+  bottom: calc(4.25rem + var(--dock-h));
+}
+
+/* Both offsets at once would push the panel past the top of a short viewport,
+   so its height budget has to know about the dock as well. */
+:root[data-term-open][data-dock='bottom'] .ac-panel {
+  max-height: min(32rem, calc(100dvh - 6.5rem - var(--dock-h)));
+}
+
+/* A bottom dock at its default half-height leaves the panel about 280px, and
+   the fixed chrome ate nearly all of it — one visible row above a footer, which
+   reads as broken rather than as tight. The intro is orientation for a
+   first-time reader; when the space is this scarce the list is what matters, so
+   the sentence goes and the rows get the room. Only the bottom dock does this:
+   a side dock takes width, which the panel has to spare. */
+:root[data-term-open][data-dock='bottom'] .ac-panel-intro {
+  display: none;
+}
+
+/* Same reasoning applied to the rest of the fixed chrome. Hiding the intro
+   alone recovered ~40px and still left one visible row: the head, the progress
+   strip and the footer together were taking 160 of the 240px available. The
+   note goes (the reset button it sits beside does not), and the paddings come
+   in. This is the one place the panel is allowed to look cramped, because at a
+   half-height terminal on a laptop it genuinely is — dragging the terminal down
+   gives it back immediately. */
+:root[data-term-open][data-dock='bottom'] .ac-panel .ac-progress {
+  padding: 0.7rem 1.15rem 0.55rem;
+}
+
+:root[data-term-open][data-dock='bottom'] .ac-panel-head {
+  padding: 0.7rem 1.15rem 0.35rem;
+}
+
+:root[data-term-open][data-dock='bottom'] .ac-panel-note {
+  display: none;
+}
+
+:root[data-term-open][data-dock='bottom'] .ac-panel-foot {
+  justify-content: flex-end;
+  padding: 0.5rem 1.15rem 0.55rem;
+}
+
+/* And the ceiling comes up: the panel was leaving a 36px gap at the top of the
+   viewport it could have been using. */
+:root[data-term-open][data-dock='bottom'] .ac-panel {
+  max-height: min(32rem, calc(100dvh - 5.25rem - var(--dock-h)));
 }

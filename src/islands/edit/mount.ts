@@ -29,6 +29,9 @@
  *     before anything changes.
  */
 
+import { sweepRetiredKeys } from '../achievements/flags';
+import { award } from '../achievements/award';
+
 const PATH_ATTRS = ['data-path', 'data-bind', 'data-bind-item'] as const;
 
 /**
@@ -147,7 +150,43 @@ interface ListInfo {
   readonly anchor: ChildNode | null;
 }
 
+/**
+ * The handle the terminal's control surface drives.
+ *
+ * It is deliberately a *handle onto this editor* rather than a second editor:
+ * `set` goes through the same `write()` the contenteditable cells go through,
+ * and `reset` is the same function the reset button calls. CLAUDE.md asks the
+ * control surface to drive the same state as the source view rather than
+ * duplicate it, and sharing the closure is the only way that stays true as
+ * this file changes.
+ */
+export interface EditorApi {
+  /** False when the path is not something the page actually renders. */
+  set(path: string, value: string): boolean;
+  reset(): void;
+  /** Every settable path, sorted. What `set` with no argument lists. */
+  paths(): string[];
+}
+
+let api: EditorApi | null = null;
+
+/**
+ * Mounts the editor if it is not already up and returns its handle. Null only
+ * when the source view is not in the document at all.
+ */
+export function ensureEditor(): EditorApi | null {
+  if (api) return api;
+  const view = document.querySelector<HTMLElement>('.source-view');
+  if (view) mountEditor(view);
+  return api;
+}
+
 export function mountEditor(view: HTMLElement): void {
+  // Idempotent. Two things can now ask for the editor — the source view's own
+  // toggle and the terminal's `set` — and mounting twice would attach a second
+  // reset listener and re-register every list against stale nodes.
+  if (api) return;
+
   const targets = new Map<string, HTMLElement[]>();
   /**
    * Paths the page renders as an attribute rather than as text: a link's
@@ -197,8 +236,36 @@ export function mountEditor(view: HTMLElement): void {
   /** A value the page renders somewhere — as text, or as an attribute. */
   const isBound = (path: string) => targets.has(path) || attrs.has(path);
 
+  /** True when the terminal has driven an edit through the handle below. */
+  let changedFromTerminal = false;
+
   function markTouched(): void {
     if (resetRow) resetRow.hidden = false;
+    award('edited-value');
+    checkCleanSlate();
+  }
+
+  /**
+   * Every value emptied and every array empty.
+   *
+   * Scanning ~50 nodes on each keystroke is cheap next to the layout the
+   * keystroke already caused, so this is not debounced — and it has to run on
+   * removals too, where there is no keystroke to debounce against.
+   *
+   * `isBound` is the filter that matters: the JSON tree contains nodes the page
+   * does not render, and requiring those to be empty would make the
+   * achievement unreachable.
+   */
+  function checkCleanSlate(): void {
+    const cells = [...view.querySelectorAll<HTMLElement>(LEAF)].filter((cell) =>
+      isBound(cell.dataset.path ?? ''),
+    );
+    if (cells.length === 0) return;
+    if (cells.some((cell) => (cell.textContent ?? '').trim() !== '')) return;
+    // Arrays must be empty, not merely blank — an empty-stringed entry is not
+    // a removed one, and the achievement is for emptying the payload.
+    if (lists.some((info) => info.details.isConnected && jsonRows(info).length > 0)) return;
+    award('clean-slate');
   }
 
   function write(path: string, text: string): void {
@@ -480,19 +547,26 @@ export function mountEditor(view: HTMLElement): void {
   }
 
   function wireRemove(info: ListInfo, row: HTMLElement): void {
-    // A branch hangs its control off the summary so it stays reachable while
-    // collapsed; a leaf puts it at the end of its own row.
+    // A leaf puts its control at the end of its own row. A branch puts it at the
+    // end of its children.
+    //
+    // **It used to hang off the <summary>**, so it stayed reachable while the
+    // node was collapsed — but a <button> inside a <summary> is a focusable
+    // control nested inside another one, which is `nested-interactive` and a
+    // genuine problem rather than a lint opinion: the disclosure and the button
+    // are two targets in the same place, and the click handler had to
+    // `stopPropagation` to stop one triggering the other. That workaround was
+    // the smell.
+    //
+    // The trade is that a collapsed node must be opened before its entry can be
+    // removed. Nodes render open, so this costs a click only for someone who
+    // collapsed it first.
     const host =
-      row.tagName === 'DETAILS' ? row.querySelector<HTMLElement>(':scope > summary') : row;
+      row.tagName === 'DETAILS' ? row.querySelector<HTMLElement>(':scope > [data-children]') : row;
     if (!host || host.querySelector(':scope > [data-remove]')) return;
     const el = button('−', `remove entry from ${pathOf(info)}`);
     el.dataset.remove = '';
-    el.addEventListener('click', (event) => {
-      // Inside a <summary> a click would otherwise toggle the disclosure.
-      event.preventDefault();
-      event.stopPropagation();
-      removeItem(info, row);
-    });
+    el.addEventListener('click', () => removeItem(info, row));
     host.append(el);
   }
 
@@ -515,6 +589,11 @@ export function mountEditor(view: HTMLElement): void {
 
     // `:scope >` matters: an object entry's rows box contains nested arrays
     // with add rows of their own, and an unscoped query finds one of those.
+    // Only an array of objects counts. Adding a string is the same gesture as
+    // editing one; adding an object means finding the control that clones a
+    // whole shape, keys and order intact.
+    if (info.objects) award('grew-payload');
+
     const addRow = info.rows.querySelector(':scope > [data-add-row]');
     if (addRow) info.rows.insertBefore(row, addRow);
     else info.rows.append(row);
@@ -655,7 +734,7 @@ export function mountEditor(view: HTMLElement): void {
     }
   }
 
-  resetButton?.addEventListener('click', () => {
+  function resetAll(): void {
     // Shallowest arrays first: restoring `stack.primary` replaces the nested
     // lists that come after it, and a replaced list cannot be restored twice.
     for (const info of [...lists].sort((a, b) => pathOf(a).length - pathOf(b).length)) {
@@ -669,5 +748,32 @@ export function mountEditor(view: HTMLElement): void {
     }
 
     if (resetRow) resetRow.hidden = true;
+  }
+
+  resetButton?.addEventListener('click', () => {
+    // Only the button earns it, never `api.reset()`. The achievement is for
+    // noticing the two surfaces drive one state, which means using one to undo
+    // the other — doing both from the terminal proves nothing.
+    if (changedFromTerminal) award('two-doors');
+    resetAll();
   });
+
+  sweepRetiredKeys();
+
+  api = {
+    set(path, value) {
+      if (!isBound(path)) return false;
+      changedFromTerminal = true;
+      const cell = view.querySelector<HTMLElement>(`${LEAF}[data-path="${CSS.escape(path)}"]`);
+      // The JSON view and the page move together, exactly as they do when the
+      // cell is typed into. `originals` was populated by makeEditable, so reset
+      // still knows what this value started as.
+      if (cell) cell.textContent = value;
+      write(path, value);
+      markTouched();
+      return true;
+    },
+    reset: resetAll,
+    paths: () => [...new Set([...targets.keys(), ...attrs.keys()])].sort(),
+  };
 }

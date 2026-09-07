@@ -137,7 +137,15 @@ const keyParts = name === undefined ? [] : [`"${name}"`];
     padding-left: 1.5ch;
   }
 
+  /* 24px, because a <summary> is a real target and WCAG 2.2's 2.5.8 asks for
+     24x24 — these rows were 18.7px and stacked, so the spacing exception does
+     not rescue them either. Only the branch rows grow: they are the only ones
+     that can be clicked, and the extra air around them reads as grouping
+     rather than as inconsistency. */
   summary {
+    display: flex;
+    align-items: center;
+    min-height: 24px;
     cursor: pointer;
     list-style: none;
   }
@@ -219,8 +227,8 @@ const keyParts = name === undefined ? [] : [`"${name}"`];
     align-items: center;
     justify-content: center;
     margin-left: 0.75ch;
-    border: 1px solid transparent;
-    border-radius: 2px;
+    border: var(--border-w) var(--border-style) transparent;
+    border-radius: var(--radius);
     background: none;
     padding: 0;
     font-family: inherit;

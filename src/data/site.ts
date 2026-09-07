@@ -57,20 +57,20 @@ export interface SiteContent {
   };
   readonly contact: readonly ContactLink[];
   /**
-   * Real ways into the site. This is the terminal's only signpost — ⌘K is
-   * advertised nowhere on screen, so without this the feature is undiscoverable.
-   * The hidden command is listed on purpose: a secret leaking through an API
-   * response is a better joke than a secret nobody finds, and it stays honest
-   * because these commands genuinely exist (CLAUDE.md, "Source view").
+   * The one thing the terminal leaks into the payload.
+   *
+   * This used to be a full `interfaces` block listing the shortcut and every
+   * command, because the terminal had no visible entry point and would
+   * otherwise have been undiscoverable. It has a button now, so the signpost
+   * is redundant and the rest was noise in a profile response — a command list
+   * is the terminal's business, not this document's.
+   *
+   * What stays is the joke, which was always the better half: a secret leaking
+   * through an API response beats a secret nobody finds. It is honest, because
+   * the command genuinely works, and it is the only place the command is
+   * written down.
    */
-  readonly interfaces: {
-    readonly web: string;
-    readonly terminal: {
-      readonly open: string;
-      readonly commands: readonly string[];
-      readonly hidden: readonly string[];
-    };
-  };
+  readonly undocumented: readonly string[];
   readonly resumeHref: string;
   /** This site's own repo. Load-bearing: it is the only real code on display. */
   readonly repoHref: string;
@@ -140,14 +140,7 @@ export const site = {
     },
   ],
 
-  interfaces: {
-    web: '/',
-    terminal: {
-      open: '⌘K',
-      commands: ['about', 'stack', 'contact', 'help', 'cls'],
-      hidden: ['sudo hire taha'],
-    },
-  },
+  undocumented: ['sudo hire taha'],
 
   // Served from `public/`. Renamed from "Taha Manaquib CV.pdf" so the URL needs
   // no %20 escaping; the capitalised name still reads well once downloaded.
