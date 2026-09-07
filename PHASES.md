@@ -1434,31 +1434,27 @@ See CLAUDE.md's Achievements section — it is the authority.
 
 **Goal:** only after everything above works end to end.
 
-### Done ahead of the phase: the tests moved into the repo
+### Tests: written, used, and deliberately not committed — Taha's decision
 
-They were written outside it, in a temp directory, and were one sweep away from being gone —
-nine suites and ~400 assertions encoding decisions that would otherwise regress silently. The
-`fix`-mode baseline rule found at the end of Phase 5 is the example: two suites disagreed, and
-that disagreement was the only thing that surfaced a real bug in `grade()`.
+Nine suites and ~450 assertions were written for the DOM-free engines and used throughout Phases
+3.6-6. They caught real bugs that reading never would have: the `fix`-mode grading baseline (two
+suites contradicting each other exposed it), the generated palettes' uneven chroma, `clampFont(NaN)`,
+the terminal's height cap being overridden by a stricter CSS backstop.
 
-- **`tests/` plus `npm test`**, a 40-line `harness.mjs` and a runner giving each suite its own
-  process — `achievements.test.mjs` installs a fake `localStorage` on `globalThis`, and suites
-  sharing a process would share that.
-- **No framework**, per CLAUDE.md's rule that none is added until something demands one. Nothing
-  here does: every assertion is one boolean and one label.
-- **The absolute paths were the actual blocker.** Every suite named `D:/My Data/...`, which is
-  precisely why they could not be committed. All resolution goes through `harness.mjs`'s `ROOT`
-  now, `readFileSync` included.
-- **Verified assertion-for-assertion**: each migrated suite prints exactly the count its original
-  did (34/54/14/46/25/51/18/122/38), so the mechanical rewrite dropped nothing. Two Node builtins
-  (`node:fs`, `node:crypto`) were caught by a blanket `import(` → `load(` rewrite and put back.
-- **The API Simulation's five suites were not moved** — their engine is deleted, so they are dead
-  code, and dead code is clutter in a repo that _is_ the portfolio.
-- Three unused destructured imports came out with them; `npm run check` is now 0 errors,
-  0 warnings, 0 hints across 47 files.
+They were briefly moved into `tests/` with a 40-line harness and an `npm test` runner. **Taha's
+decision is that they are not pushed**, so the directory, `scripts/test.mjs` and the `test` script
+in `package.json` are all gone, and CLAUDE.md now says so.
 
-The README must describe this honestly: plain Node scripts, no framework, and they cover the
-engines rather than the UI.
+Two consequences to carry forward, both recorded in CLAUDE.md:
+
+- **The engines stay DOM-free regardless.** That was never only a testing convenience — it is what
+  makes `policy.ts` readable as an argument rather than as wiring, and it is the part of the repo
+  an engineer actually opens.
+- **Verification is manual and must be done by measuring.** The duplicated JS/CSS bounds
+  (`TOP_RESERVE_PX` vs `.term`'s `max-height`) and the per-polarity contrast of the derived tokens
+  are the two places where an unguarded change goes wrong quietly.
+
+**The README must not claim a test suite exists.**
 
 ### Also done ahead of the phase: the achievements panel replaced the route
 
@@ -1491,9 +1487,9 @@ same corner.
 - Measured in a sized iframe at 360 and 390, since the harness would not shrink the window: fits,
   clears the door, scrolls internally, no horizontal overflow.
 
-**Tests followed the move.** The suite's page assertions are now panel assertions, and the two
-properties above — dynamic import, and a loader that never touches flags — are asserted rather
-than assumed.
+**The suites were updated alongside** — the page assertions became panel assertions, and the two
+properties above (dynamic import, and a loader that never touches flags) were asserted rather than
+assumed. They are not in the repo; see the note under Phase 6.
 
 ### Also done ahead of the phase: spacing, scrollbars, reset, and a fourteenth
 
@@ -1544,6 +1540,69 @@ second click, and the terminal should match.
   `global.css` because that is where the other rules targeting this button live, but the comment
   claiming it "silently did nothing" was written on a bad measurement and has been corrected.
   **On this project, the screenshot is the ground truth for anything visual.**
+
+### Step 1: the audit — DONE
+
+**Lighthouse, local production build (`astro preview`), Lighthouse 12.8.2:**
+
+| preset  | perf | a11y | best practices | SEO | FCP   | LCP   | TBT  | CLS |
+| ------- | ---- | ---- | -------------- | --- | ----- | ----- | ---- | --- |
+| desktop | 100  | 100  | 100            | 100 | 0.4 s | 0.4 s | 0 ms | 0   |
+| mobile  | 100  | 100  | 100            | 100 | 1.4 s | 1.7 s | 0 ms | 0   |
+
+These are local numbers and the README must say so — a CDN would differ.
+
+**Bundle, gzipped:** homepage 7.7 KB HTML + 9.3 KB CSS + **1.54 KB JS**; 404 3.8 KB + 0.8 KB JS.
+The JS is four loaders and nothing else. **Code-splitting verified structurally**, not assumed:
+the homepage emits exactly four `<script>` tags and **no `modulepreload`**, so Preact (4.5 KB), the
+terminal (9.0 KB), the sandbox (4.1 KB), the editor (3.6 KB) and the achievements panel (1.5 KB)
+are fetched only on interaction. One font is preloaded (Inter); the other five faces are never
+requested on the default path.
+
+**Accessibility — six real defects, all fixed.** Lighthouse only audits the initial DOM, so axe-core
+was run separately against four states: default, terminal open, terminal + achievements panel, and
+the source view on both a dark and a light identity.
+
+1. **`--color-fg-subtle` used for real text in four places** — the sandbox's `.ax-you` and
+   `.ax-req-head`, the terminal's `A−`/`A+`, and the source view's `.ctl`. It measures 3.19:1 on
+   dark and **2.77-2.79:1 on light**, and its own comment in `global.css` says it is not AA-safe
+   for text. All four now use `--color-fg-muted`.
+2. **Eight unlabelled radios in the tab order.** The unlisted palettes are deliberately label-less,
+   which left a screen-reader visitor with eight controls and nothing to tell them apart. They are
+   `tabindex="-1" aria-hidden="true"` now — still checkable programmatically, which is all the
+   terminal's `theme` command and the `:has()` selector need.
+3. **The achievements list could not be scrolled by keyboard.** A scroll container whose contents
+   are not focusable is unreachable; it is `tabindex="0"` with a name now.
+4. **`<summary>` rows were 18.7px** against WCAG 2.5.8's 24px, and stacked, so the spacing
+   exception did not rescue them. Branch rows are 24px.
+5. **A `<button>` inside `<summary>`** — the editor hung an array entry's remove control off the
+   disclosure, which is `nested-interactive`: two targets in the same place, and the click handler
+   needed `stopPropagation` to keep one from firing the other, which was the smell. It moved into
+   the node's children. Trade: a collapsed node must be opened before its entry can be removed.
+   Nodes render open, so it costs a click only for someone who collapsed it first.
+6. **Setting `role="group"` on the achievements `<ol>`** — my own fix for (3), which orphaned all
+   fourteen `<li>`. A focusable, named list is still a list; the role override was unnecessary.
+
+**Clean after the fixes:** axe reports zero violations in all four states. One further report — a
+contrast failure on `.source-toggle` under a light identity — was **disproved**: the token on the
+element resolves to that identity's value, `mixOklab` reproduces the browser's `color-mix` exactly
+(L 0.5271 vs 0.52778), and the screenshot shows it rendering correctly. It was the stale
+`getComputedStyle` this harness has produced before.
+
+**Two contrast facts, now asserted per theme** (13 new assertions), because nothing checked the
+_derived_ text token and the audit only found it by accident:
+
+- `--color-fg-muted` carries most of the small text and is a `color-mix`, so it is not the same
+  ratio on both polarities: **6.05:1 dark, 4.87:1 light**. Under half a point of headroom on the
+  light half.
+- `--color-fg-subtle` is **below AA on every identity** and below even the 3:1 non-text bar on all
+  six light ones. Pinned as a negative assertion so its role stays "decorative marks only".
+
+**Keyboard:** 36 visible focusable elements on the default page, **all with accessible names**. The
+closed source view's 27 controls are `display: none`, so they are genuinely out of the tab order —
+verified by `focus()` refusing to take, not by reading the CSS. One global `:focus-visible` ring.
+
+**Reflow (WCAG 1.4.10):** no horizontal scrolling at 320px or 360px — `scrollWidth` 310 and 350.
 
 ### Required
 

@@ -37,40 +37,42 @@ on one route:
 
 ## Tech stack (locked)
 
-| Concern             | Choice                                                                              |
-| ------------------- | ----------------------------------------------------------------------------------- |
-| Framework           | **Astro** (static output)                                                           |
-| Language            | **TypeScript**, strict                                                              |
-| Interactive islands | **Preact**, code-split, loaded on user action only                                  |
-| Styling             | **Tailwind CSS**                                                                    |
-| Hosting             | **Cloudflare Pages** (pure static; Netlify/Vercel-static are drop-in equivalents)   |
-| Backend             | **None.** See below.                                                                |
-| Tooling             | Prettier. Plain-Node tests (`npm test`), no framework, no CI, no component library. |
-| Icons               | **`lucide-static`**, inlined at build time by `src/components/Icon.astro`.          |
+| Concern             | Choice                                                                                |
+| ------------------- | ------------------------------------------------------------------------------------- |
+| Framework           | **Astro** (static output)                                                             |
+| Language            | **TypeScript**, strict                                                                |
+| Interactive islands | **Preact**, code-split, loaded on user action only                                    |
+| Styling             | **Tailwind CSS**                                                                      |
+| Hosting             | **Cloudflare Pages** (pure static; Netlify/Vercel-static are drop-in equivalents)     |
+| Backend             | **None.** See below.                                                                  |
+| Tooling             | Prettier. No test framework, no CI, no component library until something demands one. |
+| Icons               | **`lucide-static`**, inlined at build time by `src/components/Icon.astro`.            |
 
-**Tests live in `tests/`, run with `npm test`, and use no framework.** Nine suites, ~400
-assertions, one 40-line harness (`tests/harness.mjs`) and a runner that gives each suite its
-own process. They exist because the engines are deliberately DOM-free — `policy.ts`,
-`tools.ts`, `themes.ts`, `flags.ts`, `dock.ts` — so they can be checked without a browser;
-that separation is the design and this is what collects on it. Rules:
+**There is no test suite in the repo, and that is deliberate.** Suites were written for the
+DOM-free engines — `policy.ts`, `tools.ts`, `themes.ts`, `flags.ts`, `dock.ts` — and used during
+development, but **Taha's decision is that they are not committed**. Do not add a `tests/`
+directory, a `test` script, or a framework without an explicit instruction.
 
-- **No test framework until one is demanded.** Every assertion here is one boolean and one
-  label, which `check()` does in three lines. Vitest would add a config file, a watcher and a
-  dependency tree to do the same thing, in a repo whose pitch is "read the source".
-- **A suite imports the `.ts` module itself**, via Node type stripping, not a compiled copy —
-  so a test cannot pass against a build that has drifted from the source.
-- **Never hardcode an absolute path.** They were written outside the repo and every one of
-  them named `D:/My Data/...`, which is exactly why they could not live in it. Everything
-  resolves from `harness.mjs`'s `ROOT`, including `readFileSync` — a test must not depend on
-  the working directory it was launched from.
-- **Several suites read source files as text** (`global.css`, `achievements.astro`) to guard
-  values that are duplicated between JS and CSS and must be kept in step — the terminal's
-  height cap is the case that already broke once. Those assertions are the whole reason the
-  duplication is survivable; do not delete one because it looks like it tests a string.
-- **The API Simulation's five suites were not moved.** Its engine is deleted, so they are
-  dead code, and dead code is clutter in a repo that _is_ the portfolio.
+What this means in practice, and it matters:
 
-**Typecheck with `npm run check`, never `astro check` alone.** `astro check` does not traverse the
+- **The engines stay DOM-free anyway.** That separation is a design rule in its own right — it is
+  what lets an engine be reasoned about at all — not merely a testing convenience. Keep
+  `policy.ts` and its neighbours free of `document` even though nothing now checks them
+  automatically.
+- **Verification is manual, and must be done by measuring rather than assuming.** Nearly every
+  real bug in this project was found that way and would not have been found by reading: the
+  terminal's height cap silently overridden by a stricter CSS backstop, `--color-fg-subtle` used
+  for real text at 2.77:1 on the light identities, `scrollbar-width` not being an inherited
+  property, a bottom-docked terminal covering its own open button.
+- **Values duplicated between JS and CSS are now unguarded.** `TOP_RESERVE_PX` in `Terminal.tsx`
+  against `max-height` on `.term` in `global.css` is the known pair; check both by hand whenever
+  either moves.
+- **Contrast is the one to be most careful with.** The derived tokens are `color-mix` on the
+  seeds, so a value that passes on the dark ground can fail on the six light identities —
+  `--color-fg-muted` is 6.05:1 dark but only 4.87:1 light, and `--color-fg-subtle` is below AA
+  everywhere and below even 3:1 on light. Never put real text on subtle.
+
+**Typecheck with `npm run check`, never `astro check` alone.****Typecheck with `npm run check`, never `astro check` alone.** `astro check` does not traverse the
 island `.ts` files — they are reached only through a dynamic `import()` inside an inline `<script>`
 — so it reported a clean bill of health on a module containing an undefined variable that threw on
 load and disabled the whole feature. `npm run check` runs `astro check && tsc --noEmit`; the second

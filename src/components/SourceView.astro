@@ -53,6 +53,17 @@ const readouts = THEMES.map((theme) => ({
         checked={theme.id === DEFAULT_THEME.id}
         data-polarity={theme.polarity}
         data-shape={SHAPE_OF[theme.id] ?? 'clean'}
+        {...(FEATURED.includes(theme.id)
+          ? {}
+          : /* The eight unlisted palettes have no label, by design — they are
+               reachable only through the terminal's `theme` command. Without
+               this they were eight unnamed radios in the tab order, which axe
+               flags and which is genuinely worse than hiding them: a
+               screen-reader visitor met eight controls with nothing to
+               distinguish them. Hidden from assistive tech and out of the tab
+               order, they are still checkable programmatically, which is all
+               the command needs and all the `:has()` selector cares about. */
+            { tabindex: '-1', 'aria-hidden': 'true' })}
       />
     ))
   }
@@ -157,11 +168,12 @@ const readouts = THEMES.map((theme) => ({
     gap: 0.75rem;
   }
 
+  /* fg-muted, not fg-subtle: a label a visitor reads, at 3.19:1 otherwise. */
   .ctl {
     font-size: 10px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--color-fg-subtle);
+    color: var(--color-fg-muted);
   }
 
   /* Named, not swatches. A row of colour chips was tried and reverted at Taha's

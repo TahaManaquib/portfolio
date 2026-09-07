@@ -547,19 +547,26 @@ export function mountEditor(view: HTMLElement): void {
   }
 
   function wireRemove(info: ListInfo, row: HTMLElement): void {
-    // A branch hangs its control off the summary so it stays reachable while
-    // collapsed; a leaf puts it at the end of its own row.
+    // A leaf puts its control at the end of its own row. A branch puts it at the
+    // end of its children.
+    //
+    // **It used to hang off the <summary>**, so it stayed reachable while the
+    // node was collapsed — but a <button> inside a <summary> is a focusable
+    // control nested inside another one, which is `nested-interactive` and a
+    // genuine problem rather than a lint opinion: the disclosure and the button
+    // are two targets in the same place, and the click handler had to
+    // `stopPropagation` to stop one triggering the other. That workaround was
+    // the smell.
+    //
+    // The trade is that a collapsed node must be opened before its entry can be
+    // removed. Nodes render open, so this costs a click only for someone who
+    // collapsed it first.
     const host =
-      row.tagName === 'DETAILS' ? row.querySelector<HTMLElement>(':scope > summary') : row;
+      row.tagName === 'DETAILS' ? row.querySelector<HTMLElement>(':scope > [data-children]') : row;
     if (!host || host.querySelector(':scope > [data-remove]')) return;
     const el = button('−', `remove entry from ${pathOf(info)}`);
     el.dataset.remove = '';
-    el.addEventListener('click', (event) => {
-      // Inside a <summary> a click would otherwise toggle the disclosure.
-      event.preventDefault();
-      event.stopPropagation();
-      removeItem(info, row);
-    });
+    el.addEventListener('click', () => removeItem(info, row));
     host.append(el);
   }
 

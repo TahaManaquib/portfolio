@@ -164,6 +164,17 @@ function build(): HTMLElement {
   progress.append(pips, count);
 
   const list = el('ol', 'ac-list');
+  // A scroll container whose contents are not focusable cannot be scrolled by
+  // keyboard at all — the rows are plain text, so without this a keyboard
+  // visitor could open the panel and never reach past the second entry. Made
+  // focusable with a name, which is what axe's scrollable-region-focusable
+  // asks for and what actually fixes it.
+  //
+  // No `role` override here: an <ol> carries list semantics, and setting
+  // `role="group"` on it orphaned all fourteen <li> children (axe: listitem).
+  // A focusable, named list is still a list.
+  list.tabIndex = 0;
+  list.setAttribute('aria-label', 'Achievements');
   for (const achievement of ACHIEVEMENTS) {
     const row = el('li', 'ac-row');
     row.dataset.achievement = achievement.id;
