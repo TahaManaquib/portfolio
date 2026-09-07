@@ -53,7 +53,12 @@ const year = new Date().getFullYear();
     display: none;
   }
 
-  @media (hover: none) {
+  /* The same condition the terminal button is hidden on, deliberately: this
+     line explains an absence, so it must appear exactly when that absence does.
+     `hover: none` and `pointer: coarse` usually agree but are not the same
+     question, and a device where they disagree would either get the note with
+     the terminal still there, or lose the terminal with nothing saying why. */
+  @media (pointer: coarse) {
     .touch-note {
       display: block;
     }

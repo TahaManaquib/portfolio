@@ -76,15 +76,6 @@
 </script>
 
 <style>
-  /* Hidden on touch devices — see the note in the script above. CSS as well as
-     JS so the button never paints, rather than appearing and then going away
-     once the module has run. */
-  @media (pointer: coarse) {
-    .terminal-open {
-      display: none;
-    }
-  }
-
   .terminal-open {
     position: fixed;
     right: 1rem;
@@ -117,5 +108,20 @@
 
   .terminal-open:focus-visible {
     border-color: var(--color-accent);
+  }
+
+  /* Hidden on touch devices — see the note in the script above. CSS as well as
+     JS so the button never paints, rather than appearing and then being removed
+     once the module has run.
+
+     **Last in the file on purpose.** A media query carries no specificity of
+     its own, so this rule and `.terminal-open`'s own `display: inline-flex`
+     are an exact tie — and a tie is broken by source order. Written above that
+     rule, as it was first, it lost every time and the button stayed visible on
+     the phone it was meant to disappear from. */
+  @media (pointer: coarse) {
+    .terminal-open {
+      display: none;
+    }
   }
 </style>
