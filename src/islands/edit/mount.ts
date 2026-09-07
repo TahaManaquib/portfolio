@@ -147,7 +147,43 @@ interface ListInfo {
   readonly anchor: ChildNode | null;
 }
 
+/**
+ * The handle the terminal's control surface drives.
+ *
+ * It is deliberately a *handle onto this editor* rather than a second editor:
+ * `set` goes through the same `write()` the contenteditable cells go through,
+ * and `reset` is the same function the reset button calls. CLAUDE.md asks the
+ * control surface to drive the same state as the source view rather than
+ * duplicate it, and sharing the closure is the only way that stays true as
+ * this file changes.
+ */
+export interface EditorApi {
+  /** False when the path is not something the page actually renders. */
+  set(path: string, value: string): boolean;
+  reset(): void;
+  /** Every settable path, sorted. What `set` with no argument lists. */
+  paths(): string[];
+}
+
+let api: EditorApi | null = null;
+
+/**
+ * Mounts the editor if it is not already up and returns its handle. Null only
+ * when the source view is not in the document at all.
+ */
+export function ensureEditor(): EditorApi | null {
+  if (api) return api;
+  const view = document.querySelector<HTMLElement>('.source-view');
+  if (view) mountEditor(view);
+  return api;
+}
+
 export function mountEditor(view: HTMLElement): void {
+  // Idempotent. Two things can now ask for the editor — the source view's own
+  // toggle and the terminal's `set` — and mounting twice would attach a second
+  // reset listener and re-register every list against stale nodes.
+  if (api) return;
+
   const targets = new Map<string, HTMLElement[]>();
   /**
    * Paths the page renders as an attribute rather than as text: a link's
@@ -655,7 +691,7 @@ export function mountEditor(view: HTMLElement): void {
     }
   }
 
-  resetButton?.addEventListener('click', () => {
+  function resetAll(): void {
     // Shallowest arrays first: restoring `stack.primary` replaces the nested
     // lists that come after it, and a replaced list cannot be restored twice.
     for (const info of [...lists].sort((a, b) => pathOf(a).length - pathOf(b).length)) {
@@ -669,5 +705,23 @@ export function mountEditor(view: HTMLElement): void {
     }
 
     if (resetRow) resetRow.hidden = true;
-  });
+  }
+
+  resetButton?.addEventListener('click', resetAll);
+
+  api = {
+    set(path, value) {
+      if (!isBound(path)) return false;
+      const cell = view.querySelector<HTMLElement>(`${LEAF}[data-path="${CSS.escape(path)}"]`);
+      // The JSON view and the page move together, exactly as they do when the
+      // cell is typed into. `originals` was populated by makeEditable, so reset
+      // still knows what this value started as.
+      if (cell) cell.textContent = value;
+      write(path, value);
+      markTouched();
+      return true;
+    },
+    reset: resetAll,
+    paths: () => [...new Set([...targets.keys(), ...attrs.keys()])].sort(),
+  };
 }

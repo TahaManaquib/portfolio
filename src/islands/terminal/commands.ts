@@ -23,6 +23,7 @@ import {
   verifyHs256,
 } from './tools';
 import { grant, has, scopes } from './unlock';
+import { DEFAULT_DOCK, DOCKS, SIDE_MIN_VIEWPORT, isSide, type Dock } from './dock';
 
 export type Line = { kind: 'in' | 'out' | 'err' | 'dim'; text: string };
 
@@ -288,6 +289,176 @@ function sudo(): Line[] {
 }
 
 /* -------------------------------------------------------------------------- */
+/* the control surface                                                         */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * These drive the site rather than describe it, and — this is the part that
+ * matters — they drive the *same state* the source view does, never a parallel
+ * copy of it. `theme` checks the same radio the palette buttons check; `set`
+ * and `reset` go through the source view's own editor.
+ *
+ * Like every other change in the discovery layer, nothing here persists: a
+ * reload restores the real content and the real palette.
+ */
+
+/** Read from the DOM, so the list cannot drift from the radios that exist. */
+function themeIds(): string[] {
+  return [...document.querySelectorAll<HTMLInputElement>('input[name="theme"]')].map((r) =>
+    r.id.replace(/^theme-/, ''),
+  );
+}
+
+function theme(arg: string): Line[] {
+  const ids = themeIds();
+  const current =
+    document
+      .querySelector<HTMLInputElement>('input[name="theme"]:checked')
+      ?.id.replace(/^theme-/, '') ?? ids[0];
+
+  if (!arg) {
+    return [
+      out('palettes'),
+      ...ids.map((id) => (id === current ? out(`  · ${id}`) : dim(`    ${id}`))),
+      dim(''),
+      dim('usage: theme <name>'),
+    ];
+  }
+
+  const wanted = arg.toLowerCase();
+  const radio = document.getElementById(`theme-${wanted}`);
+  if (!(radio instanceof HTMLInputElement)) {
+    return [err(`no palette called '${wanted}'`), dim(`try: ${ids.join(', ')}`)];
+  }
+
+  // The same radio the palette buttons toggle. `html:has(#theme-x:checked)`
+  // carries it to :root with no JavaScript involved in the actual recolouring.
+  radio.checked = true;
+  radio.dispatchEvent(new Event('change', { bubbles: true }));
+  return [out(`palette: ${wanted}`)];
+}
+
+/** The source view's editor, mounted on demand if the view was never opened. */
+async function editor() {
+  const module = await import('../edit/mount');
+  return module.ensureEditor();
+}
+
+async function set(arg: string): Promise<Line[]> {
+  const api = await editor();
+  if (!api) return [err('the source view is not on this page')];
+
+  if (!arg) {
+    const paths = api.paths();
+    return [
+      out(`${paths.length} settable values`),
+      dim(''),
+      ...paths.map((p) => dim(`  ${p}`)),
+      dim(''),
+      dim('usage: set <path> <value>'),
+    ];
+  }
+
+  // Only the path is a token; everything after the first space is the value,
+  // quotes optional. Splitting on every space would make `set name Taha
+  // Manaquib` set the name to "Taha".
+  const split = /^(\S+)\s*([\s\S]*)$/.exec(arg);
+  const path = split?.[1] ?? '';
+  const raw = (split?.[2] ?? '').trim();
+  if (!raw) return usageError('set <path> <value>', "try 'set' alone to list the paths");
+
+  const value = /^(["'])([\s\S]*)\1$/.exec(raw)?.[2] ?? raw;
+  if (!api.set(path, value)) {
+    return [err(`'${path}' is not a value this page renders`), dim("try 'set' alone for the list")];
+  }
+  return [out(`${path} = ${value}`), dim('ephemeral — a reload restores the real content.')];
+}
+
+async function reset(): Promise<Line[]> {
+  const api = await editor();
+  api?.reset();
+
+  // The palette is a separate axis — viewer settings, not content — so it has
+  // to be put back separately. Checking the first radio is what "default" means.
+  const first = document.querySelector<HTMLInputElement>('input[name="theme"]');
+  if (first) {
+    first.checked = true;
+    first.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  return [out('reset — content and palette are back to what ships.')];
+}
+
+/**
+ * Which edge the panel sits on. The page always gives way to it — the overlay
+ * alternative was built, compared and removed (see dock.ts).
+ *
+ * The current dock is read back off `:root`, which the panel publishes it to
+ * anyway, so this cannot report something the layout disagrees with. The change
+ * goes out as an event for the same reason `open` closes by event: importing
+ * the component here would make the module graph circular.
+ */
+function dockCmd(arg: string): Line[] {
+  const root = document.documentElement;
+  const current = (root.dataset.dock ?? DEFAULT_DOCK) as Dock;
+
+  if (!arg) {
+    return [out(`dock  ${current}`), dim(''), dim(`usage: dock ${DOCKS.join('|')}`)];
+  }
+
+  const wanted = arg.toLowerCase();
+
+  if ((DOCKS as readonly string[]).includes(wanted)) {
+    // Refused with a reason rather than silently honoured and then undone by
+    // the island's own narrow-viewport guard.
+    if (isSide(wanted as Dock) && window.innerWidth < SIDE_MIN_VIEWPORT) {
+      return [
+        err(`a side dock needs about ${SIDE_MIN_VIEWPORT}px of viewport`),
+        dim(`this window is ${window.innerWidth}px, so the panel stays at the bottom.`),
+      ];
+    }
+    window.dispatchEvent(new CustomEvent('taha:set-dock', { detail: { dock: wanted } }));
+    return [out(`dock: ${wanted}`)];
+  }
+
+  return [err(`'${wanted}' is not a position`), dim(`try: ${DOCKS.join(', ')}`)];
+}
+
+/** The sections `open` can reach, read from the page rather than hardcoded. */
+function sectionIds(): string[] {
+  return [...document.querySelectorAll<HTMLElement>('main [id], section[id]')]
+    .map((el) => el.id)
+    .filter(Boolean);
+}
+
+function open(arg: string): Line[] {
+  const ids = sectionIds();
+  if (!arg)
+    return [
+      out('sections'),
+      ...ids.map((id) => dim(`  ${id}`)),
+      dim(''),
+      dim('usage: open <section>'),
+    ];
+
+  const wanted = arg.toLowerCase();
+  const target = ids.includes(wanted) ? document.getElementById(wanted) : null;
+  if (!target) return [err(`no section called '${wanted}'`), dim(`try: ${ids.join(', ')}`)];
+
+  // Close first. At full height the panel covers the page, so scrolling behind
+  // it would look like the command did nothing at all.
+  window.dispatchEvent(new CustomEvent('taha:close-terminal'));
+  // No `behavior` on purpose. Omitting it defers to the CSS `scroll-behavior`,
+  // which global.css already flips to `auto` under prefers-reduced-motion —
+  // passing `smooth` here would override that guard and force the animation on
+  // exactly the people who asked not to have it. The nav anchors get the same
+  // treatment for free by being plain links.
+  target.scrollIntoView({ block: 'start' });
+  // Focus follows the scroll, or a keyboard visitor is left where they were.
+  target.focus({ preventScroll: true });
+  return [out(`→ ${wanted}`)];
+}
+
+/* -------------------------------------------------------------------------- */
 /* the registry                                                                */
 /* -------------------------------------------------------------------------- */
 
@@ -323,6 +494,12 @@ const COMMANDS: Record<string, Command> = {
   },
   uuid: { usage: 'uuid [count]', blurb: `generate v4 UUIDs, up to ${MAX_UUIDS}`, run: uuid },
 
+  theme: { usage: 'theme [name]', blurb: 'recolour the site', run: theme },
+  dock: { usage: 'dock [where]', blurb: 'move the panel — bottom, left, right', run: dockCmd },
+  set: { usage: 'set <path> <value>', blurb: 'change any value the page renders', run: set },
+  reset: { usage: 'reset', blurb: 'put the content and palette back', run: reset },
+  open: { usage: 'open <section>', blurb: 'jump to a section', run: open },
+
   auth: {
     usage: 'auth [token]',
     blurb: 'show this session’s scopes, or claim one',
@@ -336,6 +513,7 @@ const COMMANDS: Record<string, Command> = {
 const GROUPS: readonly (readonly string[])[] = [
   ['about', 'stack', 'contact'],
   ['jwt', 'hash', 'base64', 'uuid'],
+  ['theme', 'dock', 'set', 'reset', 'open'],
   ['auth', 'help', 'cls'],
 ];
 

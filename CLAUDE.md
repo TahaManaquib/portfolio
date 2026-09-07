@@ -151,10 +151,26 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
 
 - **Terminal** — a real editor-style terminal, not a command palette. That distinction carries
   most of the character, so it is part of the spec:
-  - **A panel that slides up from the bottom**, full width, overlaying the page (the page stays
-    scrollable behind it, like an editor). Never a centred modal.
-  - **Height is drag-adjustable** from a handle on the top edge. Defaults to **50dvh** on first
-    open, then whatever the visitor set. Bounded: min ~120px so it stays usable, max
+  - **A dockable panel — bottom, left or right**, like an editor's. Never a centred modal.
+    **Bottom is the default**, and the only dock offered below 40rem, where a side dock would
+    leave no usable page. **Added at Taha's request (3.6g);** the panel was bottom-only before.
+  - **The chosen dock and each axis's size persist** to localStorage, like the panel size always
+    has — they are UI preferences, not content. Read as untrusted, like every stored value here.
+  - **The page gives way to the panel**, as an editor's does — it is not an overlay. An overlay
+    mode was built alongside push so the two could be compared, and **removed once push won**;
+    the toggle went with it. Do not reintroduce either without an explicit instruction.
+    - The side dock decided it: overlay guillotines the hero, push keeps it readable. At the
+      bottom the two were nearly indistinguishable, because the page already scrolls behind the
+      panel there and pushing only adds trailing room.
+    - **Push has two consequences that are easy to miss.** The shared `.gutter` measures `15vw`,
+      which stops being the available width the moment the page is pushed over — it has to
+      subtract the dock, or a narrowed column still gets billed full-viewport padding. And the two
+      `position: fixed` corner controls do not move with body padding, so they need offsetting.
+  - **Size is drag-adjustable** from a handle on the panel's inner edge — the top edge at the
+    bottom, the inner vertical edge when side-docked. Bottom defaults to **50dvh**; a side dock
+    defaults to a **fixed ~420px**, because half the _width_ is a split screen rather than a
+    terminal. **Each axis remembers its own size** — one shared number hands you a full-width
+    side panel the first time you switch. Bounded: min ~120px so it stays usable, max
     `100dvh - 40px` so the site is never entirely swallowed. **Raised from ~90dvh at Taha's
     request.** The 40px is not decoration: at a true 100dvh the resize handle sits exactly on the
     viewport edge, where it cannot reliably be grabbed, so the panel would open to full height
@@ -269,11 +285,34 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
        - **`src/data/secret.ts` stays dependency-free** — data, not behaviour. It must not import
          from `src/islands/`; that inverts the layering and breaks Node's type-stripping loader,
          which will not resolve the extensionless relative import the bundler accepts.
-    3. **The control surface.** `theme <name>`, `set <path> <value>`, `reset`, `open <section>` —
-       one line doing what several clicks do, driving the _same state_ as the source view rather
-       than duplicating it. This is plumbing rather than excitement; it is built because it links
-       the pillars together, not because it is the draw.
-    - **`whoami` — Phase 4.** Visitor id, first vs returning, what has been discovered.
+    3. **The control surface — built.** `theme <name>`, `set <path> <value>`, `reset`,
+       `open <section>` — one line doing what several clicks do, driving the _same state_ as the
+       source view rather than duplicating it. Plumbing rather than excitement; built because it
+       links the pillars together, not because it is the draw. Rules:
+       - **"Same state" is literal, not aspirational.** `theme` checks the very radio the palette
+         buttons check, so `html:has(#theme-x:checked)` recolours with no JS in the path at all.
+         `set` and `reset` go through the source view's own editor closure — the same `write()`
+         the contenteditable cells call, the same function the reset button calls. Proven both
+         ways: a `set` from the terminal is undone by the source view's reset button, and a value
+         typed into the JSON is undone by `reset`.
+       - **The editor is therefore mounted on demand and must be idempotent.** Two front doors now
+         ask for it — the source-view toggle and `set` — and a second `mountEditor` would attach a
+         duplicate reset listener. `ensureEditor()` guards it.
+       - **Only the path is a token; the rest of the line is the value.** Quotes optional, so
+         `set role Backend Engineer` keeps all three words. Splitting on whitespace would have
+         silently truncated every multi-word value.
+       - **`open` must not pass `behavior: 'smooth'`.** The JS option overrides CSS
+         `scroll-behavior`, and global.css flips that to `auto` under `prefers-reduced-motion` —
+         hardcoding smooth would force the animation on exactly the people who opted out. Omit the
+         option and the CSS guard applies.
+       - **`open` closes the panel first.** At full height the terminal covers the page, so
+         scrolling behind it would look like the command did nothing.
+       - **`theme` stays a separate verb from `set`.** Colours are viewer settings, not payload;
+         one verb for both would blur the boundary that keeps `theme.accent` out of `GET /taha`.
+       - Ephemeral like everything else in the discovery layer. The scrollback persists though, so
+         a reload shows the command with its effect gone — consistent, mildly odd, left alone.
+    - **`whoami` was planned and then cut at Taha's request.** Do not build it. Phase 4's
+      returning-visitor work does not gain a terminal command.
   - Not building: autocomplete, a fake filesystem, tabs, split panes. It is a personality feature
     wearing a terminal's clothes, not an emulator.
 

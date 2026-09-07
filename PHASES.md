@@ -787,10 +787,105 @@ Notes worth keeping:
 - **Cost:** always-present JS unchanged at 1,270 B gzipped. The signing key and verifier live only
   in the on-demand terminal chunk, checked by grepping the built assets rather than assumed.
 
-### 3.6d — Terminal: the control surface
+### 3.6d — Terminal: the control surface — DONE
 
-`theme`, `set`, `reset`, `open` — driving the same state as the source view. Plumbing that links
-the pillars; built last of the three terminal pieces because it is the least exciting on its own.
+`theme`, `set`, `reset`, `open`, driving the same state as the source view. Fourteen commands now,
+in four groups. **The terminal pillar is complete** — `whoami` was cut at Taha's request, so there
+is no fourth terminal slice.
+
+- **"Driving the same state" was held to literally**, which is the whole value of the slice.
+  `theme` checks the same radio the palette buttons check, so the recolouring still happens in CSS
+  with no JavaScript in the path. `set` and `reset` go through the source view's own editor
+  closure — the same `write()` the contenteditable cells call, the same function the reset button
+  is bound to. Proven in both directions in the browser: a `set` typed in the terminal is undone
+  by the source view's reset button, and a value typed into a JSON cell is undone by `reset`.
+  Neither would hold if this had been a parallel implementation, which is exactly the failure the
+  rule exists to prevent.
+- **That forced an idempotence guard.** The editor is lazy, and there are now two front doors onto
+  it. Mounting twice would have bound a second listener to the reset button. `ensureEditor()`
+  mounts once and returns a handle; `mountEditor` returns early if the handle already exists.
+- **Two real bugs found while testing, both invisible without checking:**
+  - **`scrollIntoView({ behavior: 'smooth' })` overrides CSS `scroll-behavior`**, and global.css
+    flips that to `auto` under `prefers-reduced-motion`. Hardcoding smooth in JS would have forced
+    the animation on precisely the visitors who opted out of it. Omitting the option defers to the
+    CSS, so the existing guard applies. The nav anchors were never affected — being plain links is
+    what saved them.
+  - **Splitting the argument on whitespace truncates values.** `set role Backend Engineer` must
+    keep all three words, so only the first token is the path and the remainder is the value,
+    quotes optional.
+- **`open` closes the panel before scrolling.** At full height the terminal covers the page, so
+  scrolling behind it looks like nothing happened.
+- **`theme` is deliberately not folded into `set`.** Colours are viewer settings and content is
+  payload; one verb for both would blur the boundary that keeps `theme.accent` out of `GET /taha`.
+- **51 settable paths**, read from the DOM rather than a list, so `set` with no argument cannot
+  drift from what the page actually renders. `open`'s section list is read the same way.
+- **A hidden-tab artefact worth not rediscovering:** a smooth `scrollIntoView` does not move a
+  backgrounded tab at all, while `behavior: 'auto'` does. That looked like a broken `open` until
+  the two were measured side by side. Third time this class of thing has cost time in this
+  project — frozen transitions, clamped timers, and now suppressed smooth scrolling.
+- **Cost:** always-present JS 1,270 -> 1,274 B gzipped. The editor chunk is shared, not duplicated:
+  `set` dynamic-imports the same module the source view loads.
+
+### 3.6g — Terminal: docking (bottom / left / right) — DONE
+
+Added at Taha's request, after the three planned terminal slices. The panel now docks to any of
+three edges and can either overlay the page or push it aside like an editor's.
+
+- **Two orthogonal settings, published as two attributes.** The island writes `data-dock`,
+  `data-dock-mode` and the size as `--dock-w` / `--dock-h` to `:root`, and every layout
+  consequence is a stylesheet rule keyed off those. That is what keeps push mode a one-attribute
+  difference rather than a second layout engine in JavaScript. All of it is gated on
+  `[data-term-open]`, so closing the panel puts the page back with nothing to unwind.
+- **`dock.ts` holds the sizing, DOM-free and tested in Node** — 46 assertions. The rules it
+  encodes are relationships rather than numbers: min must fit inside max at every supported
+  viewport, and a side dock may only be offered where the reserve still leaves a usable panel.
+- **The test suite also reads `global.css` and asserts the backstops agree with the constants.**
+  The stylesheet duplicates min/max as a pre-hydration fallback, and a stricter value there
+  silently overrides the island — which had already happened once, when the height cap was raised
+  and the CSS still said `90dvh`. That class of bug is now caught by a test rather than by
+  someone noticing the panel will not grow.
+- **The gutter had to change, and it is shared by the whole page.** `padding-inline: clamp(1.5rem,
+15vw - 2rem, 12rem)` measures the viewport, which stops being the available width the moment a
+  side dock pushes the page over: on a 1536px window with a 484px dock the column is 1037px but a
+  bare `15vw` still bills it 192px a side. Subtracting the dock takes that to 83px. Verified in
+  the browser, both numbers.
+- **Per-axis sizes, stored separately.** A 50dvh height is a nonsense width. The height key keeps
+  its old name so returning visitors' stored heights still apply.
+- **A side dock defaults to 420px, not half the window.** Half the _width_ is a split screen;
+  editors sit side panels around 300-400px. The bottom dock keeps 50dvh, which is what the spec
+  asks for.
+- **The resize direction inverts between the two side docks** — ArrowRight grows a left-docked
+  panel, ArrowLeft grows a right-docked one — and `aria-orientation` becomes `vertical`. Wiring
+  both sides to the same key is the easy mistake and feels wrong immediately.
+- **Below 40rem a side dock is refused, with a reason.** The command says how much viewport it
+  needs and how much there is, rather than accepting the instruction and quietly undoing it.
+- **Cost:** always-present JS 1,274 -> 1,273 B gzipped. Nothing here is on the recruiter path.
+
+**Push won, and overlay is gone.** Taha compared the two and chose push, so the losing mode and
+the toggle were both deleted rather than left as a permanent setting — which is what the A/B was
+set up to allow. What that removal touched: the `Mode` type, `MODES`, `DEFAULT_MODE`, `loadMode`,
+`saveMode`, the `taha:terminal-mode` key, the `data-dock-mode` attribute, the title-bar toggle and
+its styles, the `dock push|overlay` arm of the command, and the `[data-dock-mode='push']` qualifier
+on every layout rule — push is now unconditional. Two assertions guard the removal: the stylesheet
+must contain no `data-dock-mode`, and `dock.ts` must export no mode API.
+
+**The default is the bottom dock**, and the dock plus each axis's size persist, so a visitor who
+moves or resizes the panel finds it where they left it.
+
+A stale `taha:terminal-mode` in a returning visitor's storage is inert — nothing reads it — and is
+left to be swept up with `taha:api-progress` in Phase 4, where the localStorage work lives anyway.
+Verified: a browser holding `taha:terminal-mode: "overlay"` still gets push.
+
+Two harness lessons from testing this one, both cost real time:
+
+- **Preact schedules `useEffect` through `requestAnimationFrame`,** which is paused in a
+  backgrounded tab — so the dock attributes were simply never written and the panel looked broken.
+  They arrive on the `setTimeout` fallback about a second later. Anything that asserts on an
+  effect's result needs a real timer, not microtasks.
+- **Never monkeypatch `window.innerWidth`.** Restoring it as a static value left it frozen at a
+  stale number while the real window was 300px narrower; the component reads it for clamping, so
+  every later measurement was against a fake viewport and produced a convincing-looking "clipped
+  nav" bug that did not exist. Reload rather than patch.
 
 ### 3.6e — Customization: generated palettes
 
@@ -820,7 +915,8 @@ Build (one at a time, approval between each):
 1. Anonymous visitor ID, generated client-side, kept in localStorage
 2. Interaction/unlock-flag persistence in localStorage, read after first paint
 3. Returning-visitor message + one small rotating discovery
-   - Add the terminal's **`whoami`** here: visitor id, first vs returning, what has been found.
+   - **No terminal command for this.** `whoami` was cut at Taha's request; the returning-visitor
+     surface is the page itself, not a command.
 4. Public repo link ("view source"), if not already placed in Phase 1
 
 Achievements are still deferred (Phase 5) — this phase persists the underlying flags, not a

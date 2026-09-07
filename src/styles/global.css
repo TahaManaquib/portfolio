@@ -149,7 +149,13 @@
    padding than there is viewport.
    --------------------------------------------------------------------------- */
 @utility gutter {
-  padding-inline: clamp(1.5rem, 15vw - 2rem, 12rem);
+  /* `15vw` is the viewport, which stops being the available width the moment a
+     side-docked terminal pushes the page over. On a 1440px viewport with a
+     400px dock the content box is 1040px, but a bare 15vw would still bill it
+     216px of padding a side and squeeze the column badly. --dock-push-w is the
+     dock's width, and only in push mode — it is 0 otherwise, so this reduces to
+     the original expression exactly. */
+  padding-inline: clamp(1.5rem, calc((100vw - var(--dock-push-w, 0px)) * 0.15 - 2rem), 12rem);
 }
 
 /* ---------------------------------------------------------------------------
@@ -316,26 +322,52 @@
 
   .term {
     position: fixed;
-    inset-inline: 0;
-    bottom: 0;
     z-index: 60;
     display: flex;
     flex-direction: column;
-    /* These mirror MIN_PX and TOP_RESERVE_PX in Terminal.tsx. The island clamps
-       the height exactly; this pair is the backstop for the moment before it
-       hydrates and for a viewport that shrinks under a stored height. Keep them
-       in step — a stricter cap here silently overrides the island, which is
-       what happened when this said 90dvh and the knob said something else. */
-    min-height: 120px;
-    max-height: calc(100dvh - 40px);
     background-color: var(--color-bg);
-    border-top: 1px solid var(--color-border-strong);
     font-family: var(--font-mono);
     font-size: 13px;
     line-height: 1.7;
+  }
+
+  /* Bottom dock — the default, and the only one below 40rem.
+
+     The min/max here mirror MIN_HEIGHT and BOTTOM_RESERVE in dock.ts. The
+     island clamps exactly; this pair is the backstop for the moment before it
+     hydrates and for a viewport that shrinks under a stored size. Keep them in
+     step — a stricter cap here silently overrides the island, which is what
+     happened once when this said 90dvh and the knob said something else. */
+  :root[data-dock='bottom'] .term,
+  :root:not([data-dock]) .term {
+    inset-inline: 0;
+    bottom: 0;
+    min-height: 120px;
+    max-height: calc(100dvh - 40px);
+    border-top: 1px solid var(--color-border-strong);
     /* Lifts the panel off the page instead of letting it sit flat against it.
        Static, no animation — it is depth, not motion. */
     box-shadow: 0 -24px 48px -24px rgb(0 0 0 / 85%);
+  }
+
+  /* Side docks. Mirrors MIN_WIDTH and SIDE_RESERVE in dock.ts. */
+  :root[data-dock='left'] .term,
+  :root[data-dock='right'] .term {
+    inset-block: 0;
+    min-width: 280px;
+    max-width: calc(100vw - 120px);
+  }
+
+  :root[data-dock='left'] .term {
+    left: 0;
+    border-right: 1px solid var(--color-border-strong);
+    box-shadow: 24px 0 48px -24px rgb(0 0 0 / 85%);
+  }
+
+  :root[data-dock='right'] .term {
+    right: 0;
+    border-left: 1px solid var(--color-border-strong);
+    box-shadow: -24px 0 48px -24px rgb(0 0 0 / 85%);
   }
 
   /* The drag target is taller than the visible rule — a 1px grab area is a
@@ -343,24 +375,55 @@
   /* Straddles the top edge so the grab area is reachable from just above the
      panel, as an editor sash is. The drag target is deliberately taller than
      the 1px rule it draws — a 1px target is miserable to hit. */
+  /* Straddles the panel's inner edge, whichever edge that currently is, so the
+     grab area is reachable from just outside the panel as an editor sash is. */
   .term-handle {
     position: absolute;
+    touch-action: none;
+    z-index: 1;
+  }
+
+  :root[data-dock='bottom'] .term-handle,
+  :root:not([data-dock]) .term-handle {
     top: -5px;
     inset-inline: 0;
     height: 11px;
     cursor: ns-resize;
-    touch-action: none;
-    z-index: 1;
+  }
+
+  :root[data-dock='left'] .term-handle {
+    right: -5px;
+    inset-block: 0;
+    width: 11px;
+    cursor: ew-resize;
+  }
+
+  :root[data-dock='right'] .term-handle {
+    left: -5px;
+    inset-block: 0;
+    width: 11px;
+    cursor: ew-resize;
   }
 
   .term-handle::after {
     content: '';
     position: absolute;
+    background-color: transparent;
+    transition: background-color 150ms ease;
+  }
+
+  :root[data-dock='bottom'] .term-handle::after,
+  :root:not([data-dock]) .term-handle::after {
     inset-inline: 0;
     top: 5px;
     height: 1px;
-    background-color: transparent;
-    transition: background-color 150ms ease;
+  }
+
+  :root[data-dock='left'] .term-handle::after,
+  :root[data-dock='right'] .term-handle::after {
+    inset-block: 0;
+    left: 5px;
+    width: 1px;
   }
 
   .term-handle:hover::after,
@@ -400,10 +463,76 @@
     color: var(--color-fg);
   }
 
-  .term-hint {
+  /* Dock controls. Three glyphs drawn in CSS rather than shipped as icons —
+     each is a rectangle with one thick edge, so the row reads as a small map of
+     where the panel can sit. */
+  .term-docks {
+    display: flex;
+    gap: 0.25rem;
     margin-left: auto;
+  }
+
+  .term-dock {
+    display: inline-flex;
+    min-width: 1.75rem;
+    min-height: 1.75rem;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 2px;
+    background: none;
+    color: var(--color-fg-subtle);
+    cursor: pointer;
+    transition: color 150ms ease;
+  }
+
+  .term-dock:hover,
+  .term-dock:focus-visible {
+    color: var(--color-fg);
+  }
+
+  .term-dock[aria-pressed='true'] {
+    color: var(--color-accent);
+  }
+
+  .term-dock-glyph {
+    width: 13px;
+    height: 11px;
+    border: 1px solid currentColor;
+    border-radius: 1px;
+  }
+
+  .term-dock[data-dock-btn='left'] .term-dock-glyph {
+    border-left-width: 4px;
+  }
+
+  .term-dock[data-dock-btn='right'] .term-dock-glyph {
+    border-right-width: 4px;
+  }
+
+  .term-dock[data-dock-btn='bottom'] .term-dock-glyph {
+    border-bottom-width: 4px;
+  }
+
+  /* A side dock is not offered where it would leave no usable page; the island
+     forces the bottom dock at the same width (SIDE_MIN_VIEWPORT in dock.ts). */
+  @media (width < 40rem) {
+    .term-docks {
+      display: none;
+    }
+  }
+
+  .term-hint {
     color: var(--color-fg-muted);
     letter-spacing: 0.06em;
+  }
+
+  /* The hint is the first thing to go when the bar runs out of room — the dock
+     controls do something, and this only restates what Esc already does. */
+  @media (width < 52rem) {
+    .term-hint {
+      display: none;
+    }
   }
 
   .term-close {
@@ -935,4 +1064,60 @@
       font-size: 11px;
     }
   }
+}
+
+/* ---------------------------------------------------------------------------
+   Terminal docking — the page's half of it.
+
+   The island publishes two things to :root and nothing else: `data-dock` (which
+   edge) and the size, as --dock-w / --dock-h. Every consequence below is a
+   stylesheet rule keyed off those, which is what kept the whole feature a
+   matter of attributes rather than a second layout engine in JavaScript.
+
+   The page always gives way to the panel. An overlay mode was built so the two
+   could be compared and removed once push won — on a side dock overlay covered
+   the hero, and at the bottom the two were nearly indistinguishable because the
+   page already scrolls behind the panel.
+
+   All of it is gated on [data-term-open], set by mount.tsx, so closing the
+   panel puts the page back without the component unwinding anything.
+   --------------------------------------------------------------------------- */
+:root {
+  --dock-w: 0px;
+  --dock-h: 0px;
+}
+
+/* Push: the page gives way, the way an editor's does. */
+:root[data-term-open][data-dock='left'] body {
+  padding-left: var(--dock-w);
+}
+
+:root[data-term-open][data-dock='right'] body {
+  padding-right: var(--dock-w);
+}
+
+/* The bottom dock gains least from this, because the page already scrolls
+   behind the panel — what it actually buys is being able to scroll the last
+   section clear of it, which the scroll-padding is there for. */
+:root[data-term-open][data-dock='bottom'] body {
+  padding-bottom: var(--dock-h);
+}
+
+:root[data-term-open][data-dock='bottom'] {
+  scroll-padding-bottom: calc(var(--dock-h) + 1rem);
+}
+
+/* Only a side dock narrows the content box, so only that case feeds the
+   gutter. */
+:root[data-term-open][data-dock='left'],
+:root[data-term-open][data-dock='right'] {
+  --dock-push-w: var(--dock-w);
+}
+
+/* The two corner controls are position: fixed, so body padding does not move
+   them and a right-hand dock would slide underneath. The page beside the panel
+   is meant to stay usable, so they step aside. */
+:root[data-term-open][data-dock='right'] .source-toggle,
+:root[data-term-open][data-dock='right'] .terminal-open {
+  right: calc(1rem + var(--dock-w));
 }
