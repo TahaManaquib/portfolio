@@ -4,7 +4,7 @@ A backend engineer's portfolio that shows no projects, because **the site is the
 is nothing to look at but the thing you are looking at: how fast it loads, how it is built, and
 what it does when you start poking at it.
 
-Live: _not deployed yet — going up on Vercel first, then `tahamanaquib.com`._
+**Live: <https://taha-portfolio-ashy.vercel.app>** — moving to `tahamanaquib.com`.
 
 Two audiences, deliberately. A recruiter should understand who I am and how to reach me in about
 a minute without touching anything interactive. An engineer who keeps clicking finds a permission
@@ -102,6 +102,12 @@ control.
 
 ⌘K, or the button in the corner. A dockable, resizable panel — not a command palette — with fifteen
 commands, and the filter for adding one is that it must _do_ something you cannot do by pointing.
+
+**It is desktop-only.** A phone gets the source view and the achievements panel; the terminal is
+the reason to open the site on a real machine, and the achievements list keeps naming the things it
+unlocks so the gap reads as an invitation rather than as missing functionality. The gate is
+`pointer: coarse`, not a width — a terminal is a typing tool, so the honest question is whether the
+device has a keyboard.
 
 Four of them are real tools that run locally and send nothing anywhere: `jwt` decodes a token
 (header, claims, expiry — and says plainly that it does **not** verify, because verifying needs a

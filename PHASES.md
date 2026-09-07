@@ -1604,6 +1604,34 @@ verified by `focus()` refusing to take, not by reading the CSS. One global `:foc
 
 **Reflow (WCAG 1.4.10):** no horizontal scrolling at 320px or 360px — `scrollWidth` 310 and 350.
 
+### Deployed, and one change that came from using it
+
+Live on Vercel: <https://taha-portfolio-ashy.vercel.app>, moving to `tahamanaquib.com`.
+
+`astro.config.mjs` resolves `site` rather than hardcoding it — `SITE_URL`, then
+`VERCEL_PROJECT_PRODUCTION_URL`, then the custom domain. Vercel sets the second itself, so the
+canonical and OG URLs are right on the `.vercel.app` deployment today and follow the custom domain
+automatically once it is attached. Deliberately not `VERCEL_URL`, which is per-deployment and would
+give every preview build its own canonical.
+
+**The terminal is now desktop-only**, at Taha's request after using the site on a phone. A touch
+device gets the source view and the achievements panel; the terminal is the reason to open the site
+on a real machine.
+
+- **The achievements list still names what the terminal unlocks**, on his instruction. Five entries
+  become unreachable on a phone — and that is the point: the gap reads as an invitation rather than
+  as missing functionality.
+- **Gated on `(pointer: coarse)`, not a width.** A terminal is a typing tool, so the question is
+  whether the device has a keyboard. Any width threshold either lets a 900px phone in landscape
+  through or hides the terminal on small laptops.
+- **Both in CSS and in the loader**, so the button never paints, ⌘K goes with it (an iPad with a
+  keyboard must not summon a panel it cannot see exists), and the 9 KB terminal chunk can never be
+  fetched by a device that cannot use it.
+- Verified by construction rather than on a phone, since the harness cannot emulate pointer type:
+  the media query's selector matches the button (so the rule necessarily applies when the query is
+  true), and the built loader reads `t ? [] : querySelectorAll(...)` with `t ||` short-circuiting
+  the keydown handler.
+
 ### Required
 
 - **`README.md`** — the final deliverable, and the last thing built. See CLAUDE.md's "What the

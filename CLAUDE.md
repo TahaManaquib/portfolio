@@ -262,8 +262,21 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
   - **The resize handle must be keyboard-operable** — `role="separator"`, `aria-orientation`,
     `aria-valuenow`, arrow keys to nudge. If it can be resized with a mouse it must be resizable
     without one.
-  - **Entry: a visible button on every device**, bottom-right, paired with the source-view
-    toggle; ⌘K / Ctrl+K still works and is named in the button's tooltip.
+  - **The terminal is desktop-only.** Changed at Taha's request after using the site on a phone:
+    a touch device gets the source view and the achievements panel and nothing else, because the
+    terminal is the reason to come back on a real machine. The achievements list still names the
+    things it unlocks, deliberately — the gap should read as an invitation rather than as missing
+    functionality, and a visitor who sees four entries they cannot reach knows where to go.
+    - **The gate is `(pointer: coarse)`, never a width.** A terminal is a typing tool, so the
+      honest question is whether the device has a keyboard, not how many pixels it has. Any width
+      threshold either lets a 900px phone in landscape through or pays for it by hiding the
+      terminal on small laptops.
+    - **Gated in both CSS and the loader.** CSS so the button never paints; the loader so the
+      ⌘K shortcut goes with it — an iPad with a keyboard must not be able to summon a panel it
+      has no visible way to know exists — and so the chunk can never be fetched on a device that
+      cannot use it.
+  - **Entry: a visible button, bottom-right**, paired with the source-view toggle; ⌘K / Ctrl+K
+    still works and is named in the button's tooltip.
     - **It is a toggle, and it is lit while the panel is open** — like the source-view control
       beside it and the achievements door opposite. It used to only ever open, so the one visible
       way in had no way out: ⌘K toggled, the button did not. The highlight is keyed on
