@@ -53,6 +53,13 @@ island `.ts` files — they are reached only through a dynamic `import()` inside
 load and disabled the whole feature. `npm run check` runs `astro check && tsc --noEmit`; the second
 half is the one that covers `src/islands/**`.
 
+**Six typefaces are declared, four of them lazy.** Inter and JetBrains Mono are the site's;
+Newsreader, Archivo, Nunito and Space Grotesk belong to individual identities (3.6h). A
+`@font-face` whose family no rendered text matches is never downloaded, so those four cost the
+default path nothing — measured, not assumed: the default page fetches exactly two font files, and
+a third arrives only when the identity using it is selected. **Nothing on the default path may
+reference an identity face**, or it is fetched for everybody; a test asserts it.
+
 Why Astro: it ships **zero client JS by default**, so the recruiter path is HTML + CSS with
 nothing to hydrate. Its islands model maps 1:1 onto the code-splitting rule below — interactive
 features physically cannot leak into the initial page load. Do not swap the framework without an
@@ -426,15 +433,101 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
       turns wonky, and it needed a script. **Do not rebuild the picker.**
     - **Four presets is not enough, and the answer is more axes and more generated options — not
       a colour wheel.** Two things are being built, **in this order**:
-      1. **Generated palettes.** A palette is already _one hue plus a rule_, since nine tokens
-         derive from three seeds by `color-mix()`. So offer a swatch row of 10–14 hues, each
-         generated through that system and contrast-validated at build time. Many more options
-         with zero risk of the wonkiness the picker caused, because the visitor chooses a _hue_
-         and the system does the rest.
-      2. **Vibes, not palettes.** A preset should change the site's whole character, not three
-         colours: palette **plus** typography **plus** density **plus** border treatment. Four or
-         five named identities, each internally coherent. Still zero JS — the same radio group
-         setting more tokens. This is what makes "the vibe can be changed" literally true.
+      1. **Generated palettes — built.** A palette is already _one hue plus a rule_, since nine
+         tokens derive from three seeds by `color-mix()`. So the rule is written down and applied
+         to a list of hues: **twelve swatches**, one hand-picked `default` plus eleven generated,
+         all contrast-validated at build time. Many more options with none of the wonkiness the
+         picker caused, because the visitor chooses a _hue_ and the system chooses the rest.
+         Rules that came out of building it:
+         - **Generated in OKLCH, shipped as hex.** OKLCH because its lightness is perceptually
+           uniform — in HSL one recipe would make yellow far brighter than blue and the contrast
+           would swing across the wheel. Converted at build time rather than emitting `oklch()`,
+           so the value that is contrast-checked is byte-for-byte the value the browser paints.
+         - **The recipe's lightness is measured, not chosen.** sRGB is not equally wide at every
+           hue, so a fixed chroma gets clipped at some hues and not others — at L=0.82 indigo kept
+           0.089 while amber kept 0.145, and a set that uneven does not read as one family. L=0.74
+           is where the narrowest hue can hold the most: teal limits below it, indigo above, and
+           the curves cross there. Every generated accent is now L=0.740, C=0.125, nothing
+           clipped, all AAA.
+         - **A clipped channel is a bug, not a rounding detail.** Per-channel clipping shifts hue
+           as well as chroma, so the generated blue stops being the blue the recipe asked for.
+           Chroma is reduced by binary search until the colour fits, and the tests assert no
+           accent sits on the sRGB boundary.
+         - **The derived text token is validated too.** `--color-accent-soft` is a runtime
+           `color-mix()` that carries small text, which makes it the one derived value that can
+           quietly fall under AA. The oklab mix is reproduced at build time and checked. With four
+           hand-picked palettes it was measured by hand; with twelve it cannot be.
+         - **`default` is never generated.** It is what ships and what every first visit sees, and
+           the CSS deliberately emits nothing for it — selecting it is the absence of an override.
+         - **The control stays named labels, and shows only four.** A swatch row was built and
+           **reverted at Taha's request** — the names are the point, since "amber" and "azure"
+           say what they are where a dozen anonymous squares make you click each to find out.
+           Do not rebuild the swatches.
+         - **Four featured, eight unlisted — and the unlisted ones are not removed.** The source
+           view labels `default`, `amber`, `azure` and `violet`; the terminal's `theme` command
+           reaches all twelve. This works because the radios and their labels are already
+           separate in the markup: all twelve radios render (they are `sr-only`), only four get
+           a label, and an unlabelled radio is still checkable. Same shape as the terminal's
+           hidden command — depth without clutter.
+           - **Every palette keeps its seed rule and its contrast readout**, featured or not.
+             Dropping either would make a terminal-selected palette silently do nothing, or show
+             the wrong figures — and the readout is not optional.
+         - **Every per-palette rule is generated**, including the three sibling-combinator blocks
+           that used to be hand-written in `SourceView.astro`. A sibling combinator cannot be
+           parameterised, so a dozen palettes meant three dozen hand-maintained lines.
+      2. **Twelve identities, six dark and six light (3.6h) — built.** Every theme is a full
+         identity, not a recolour: typeface, ground, borders, corners, density and palette. Six
+         _shapes_ — clean, terminal, editorial, brutal, blueprint, soft — each worn twice, once on
+         a dark ground and once on a light one. Rules:
+         - **A shape is defined once and worn twice.** `SHAPES` is keyed by design, `SHAPE_OF`
+           maps themes onto it, so a dark/light pair shares one object and cannot drift. Twelve
+           separate definitions would defeat the point.
+         - **Grounds must be `color-mix` on the seeds, never fixed colours.** That is the only
+           reason a grid, a scanline and a wash all invert correctly on a light ground with no
+           light-specific values. A hardcoded colour would need doubling per polarity.
+         - **`clean` is the absence of every override, on both grounds.** The shipped site is what
+           the other five depart from.
+         - **Identity typefaces are lazy and must stay that way.** See the stack section: nothing
+           on the default path may reference one.
+         - **Layout is one of the axes, not just colour and type.** `--layout-align`,
+           `--layout-justify`, `--layout-mx` and `--label-cols` let a look centre the hero and
+           stack the section labels. That is the difference between a repaint and a different
+           site, and the tests assert it: every look must move type **and** either the layout or
+           the ground.
+         - **The grounds are the part Taha liked most**, so they are multi-layer and deliberate —
+           a phosphor glow, a two-scale drafting grid, diagonal bands, a three-stop wash. Still
+           `color-mix` on the seeds, still off by default.
+         - **The theme listing groups by look**, and `HUES` is ordered in pairs, so twelve names
+           read as six designs on two grounds.
+         - Measure the hero at 360 and 390 **per identity** when touching any of this. Six
+           typefaces, display sizes from 28px to 96px; the clamp floors matter more than the
+           ceilings.
+
+      3. **Vibes, not palettes — built.** A preset changes the site's whole character, not three
+         colours: palette **plus** typography **plus** density **plus** border treatment. Still
+         zero JS — the same radio group setting more tokens. Rules:
+         - **The four keep their colour names**, at Taha's request: `default`, `amber`, `azure`,
+           `violet`. The name is a colour and the identity is a whole design; "amber" naming a
+           warm mono identity reads fine. Do not rename them to identity words.
+         - **Each vibe is one selector.** Colour, type, density and borders are emitted together
+           in the same `html:has(#theme-x:checked)` rule, which is what makes a vibe a single
+           thing rather than four settings that happen to agree.
+         - **Density is `--spacing`**, Tailwind v4's own base unit — every `p-*`, `gap-*` and
+           `m-*` derives from it, so one override rescales the page. `--spacing-section` is now
+           `calc(var(--spacing) * 24)` for the same reason: without that the largest spacing on
+           the page ignored the density axis entirely.
+         - **Typography goes through `--font-body` and `--font-display`**, not by redefining
+           `--font-sans`/`--font-mono`. The two stacks stay what they are; a vibe repoints what
+           the page _uses_, so "everything mono" is one override.
+         - **A mono vibe must shrink the display size.** A monospace face at the same clamp is far
+           wider than Inter, and the hero overflows a phone. Measured per vibe at 360 and 390,
+           not once.
+         - **Radius and border weight are tokens now** (`--radius`, `--radius-lg`, `--border-w`).
+           Tailwind inlines `1px` into `.border-b`/`.border-t` rather than referencing a var, so
+           those two are re-pointed by an unlayered rule — otherwise the weight axis cannot reach
+           the nav, the section rules or the footer.
+         - **A vibe on an unlisted palette throws at build.** Only the featured four have a label,
+           so only they can carry one; anything else is dead weight that looks like a feature.
     - **Reordering and hiding sections** — letting a visitor rearrange the page rather than just
       recolour it — is a real third axis and the deepest form of "make it yours". Parked, not
       cut; revisit after the two above are in.
@@ -587,7 +680,10 @@ anything the repo does not actually contain.
 - Mostly neutral palette: one background/neutral, one text system, one subtle accent.
 - Lots of whitespace, thin subtle borders, strong hierarchy, minimal visual noise.
 - Single fixed theme (**dark**), and **no light/dark toggle** — dark is the base, it is what
-  ships, and it is what every first visit sees. The palette editor in the source view (Phase
+  ships, and it is what every first visit sees. **Light identities exist (3.6h) and are terminal-
+  only**, which is the line that keeps this from being a mode switch: six of the twelve themes are
+  light, none is labelled in the source view, and there is no brightness control anywhere a
+  recruiter goes. Putting a light theme on the page would make it a toggle. The palette editor in the source view (Phase
   3.5a) is a different thing: a discovery-layer toy that recolours the tokens ephemerally for
   one visitor. It never changes the default, and it is never a light-mode switch.
 - Encode the above as Tailwind theme tokens (colors, font families, spacing/type scale) so the
@@ -603,9 +699,15 @@ glyph pixels differ from the ground by about 3/255, it read as noise competing w
 rather than as texture. The source-view toggle turned out to be the better home for that idea:
 the JSON is legible on demand instead of half-visible all the time.
 
-Do not reintroduce a background — not the JSON texture, not a dot grid, not grain, not a glow —
-without an explicit instruction. Prior attempts and the reasons they were rejected are recorded
-here so this does not get rediscovered.
+Do not reintroduce a background on the default page — not the JSON texture, not a dot grid, not
+grain, not a glow — without an explicit instruction. Prior attempts and the reasons they were
+rejected are recorded here so this does not get rediscovered.
+
+**Amended for vibes (3.6h), at Taha's request.** A `--vibe-bg` token exists and an identity may set
+it. The distinction that keeps the original rule intact: what failed was _ambient texture on the
+page everyone sees_, which read as noise competing with the content at any opacity. A deliberate
+ground belonging to one identity, off unless that identity is chosen, is a different thing. **The
+shipped site stays flat** — `--vibe-bg` defaults to `none`.
 
 ## Working conventions
 

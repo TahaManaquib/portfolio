@@ -302,11 +302,23 @@ function sudo(): Line[] {
  * reload restores the real content and the real palette.
  */
 
-/** Read from the DOM, so the list cannot drift from the radios that exist. */
+/**
+ * Read from the DOM, so the list cannot drift from the radios that exist — and
+ * that includes the polarity, which rides along as a data attribute rather than
+ * being imported. Importing `themes.ts` here would drag the whole OKLab
+ * conversion into the terminal chunk to answer a question the markup already
+ * knows the answer to.
+ */
+function themeEntries(): { id: string; polarity: string; shape: string }[] {
+  return [...document.querySelectorAll<HTMLInputElement>('input[name="theme"]')].map((r) => ({
+    id: r.id.replace(/^theme-/, ''),
+    polarity: r.dataset.polarity ?? '',
+    shape: r.dataset.shape ?? '',
+  }));
+}
+
 function themeIds(): string[] {
-  return [...document.querySelectorAll<HTMLInputElement>('input[name="theme"]')].map((r) =>
-    r.id.replace(/^theme-/, ''),
-  );
+  return themeEntries().map((t) => t.id);
 }
 
 function theme(arg: string): Line[] {
@@ -317,12 +329,28 @@ function theme(arg: string): Line[] {
       ?.id.replace(/^theme-/, '') ?? ids[0];
 
   if (!arg) {
-    return [
-      out('palettes'),
-      ...ids.map((id) => (id === current ? out(`  · ${id}`) : dim(`    ${id}`))),
-      dim(''),
-      dim('usage: theme <name>'),
-    ];
+    // Grouped by shape, because the twelve are really six designs seen on two
+    // grounds — a flat list hides that and reads as twelve unrelated names.
+    // The polarity is shown here and nowhere else: there is no brightness
+    // control on the page, so a light identity is something you find.
+    const entries = themeEntries();
+    const width = Math.max(...entries.map((t) => t.id.length));
+
+    const shapes: string[] = [];
+    for (const t of entries) if (!shapes.includes(t.shape)) shapes.push(t.shape);
+
+    const lines: Line[] = [out(`${shapes.length} looks, each on two grounds`)];
+    for (const shape of shapes) {
+      lines.push(dim(''));
+      lines.push(dim(`  ${shape}`));
+      for (const t of entries.filter((e) => e.shape === shape)) {
+        const line = `    ${t.id === current ? '·' : ' '} ${t.id.padEnd(width)}  (${t.polarity})`;
+        lines.push(t.id === current ? out(line) : dim(line));
+      }
+    }
+    lines.push(dim(''));
+    lines.push(dim('usage: theme <name>'));
+    return lines;
   }
 
   const wanted = arg.toLowerCase();

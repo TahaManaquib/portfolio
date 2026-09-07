@@ -30,6 +30,66 @@
 }
 
 /* ---------------------------------------------------------------------------
+   Identity typefaces (3.6h).
+
+   These belong to individual vibes, not to the site. **None of them is
+   downloaded unless the identity that uses it is selected** — a browser fetches
+   a @font-face's source only when rendered text actually matches the family, so
+   declaring one costs nothing but the few bytes of this rule. That is what
+   makes a per-identity typeface affordable against a hard performance
+   constraint, and it is measured rather than assumed: the default page must
+   still fetch exactly two font files.
+
+   Same latin subset and `font-display: swap` as the two above, so a vibe's
+   first paint behaves like the default's.
+   --------------------------------------------------------------------------- */
+@font-face {
+  font-family: 'Newsreader Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url('@fontsource-variable/newsreader/files/newsreader-latin-wght-normal.woff2')
+    format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Archivo Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('@fontsource-variable/archivo/files/archivo-latin-wght-normal.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Nunito Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 1000;
+  src: url('@fontsource-variable/nunito/files/nunito-latin-wght-normal.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Space Grotesk Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300 700;
+  src: url('@fontsource-variable/space-grotesk/files/space-grotesk-latin-wght-normal.woff2')
+    format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* ---------------------------------------------------------------------------
    Theme tokens.
 
    The default Tailwind color palette is cleared on purpose: this site has one
@@ -113,9 +173,14 @@
   --text-heading--line-height: 1.15;
   --text-heading--letter-spacing: -0.02em;
 
-  /* Vertical rhythm between page sections */
-  --spacing-section: 6rem;
-  --spacing-section-sm: 4rem;
+  /* Vertical rhythm between page sections.
+
+     Derived from Tailwind's own base unit rather than fixed, so the density
+     axis of a vibe reaches the page's largest spacing and not only the small
+     utilities. At the default --spacing of 0.25rem these are exactly the 6rem
+     and 4rem they were before. */
+  --spacing-section: calc(var(--spacing) * 24);
+  --spacing-section-sm: calc(var(--spacing) * 16);
 
   /* The layout is full-bleed — there is no centered max-width column. Width is
      controlled by the `.gutter` edge padding below instead.
@@ -124,6 +189,127 @@
      wide monitor is unreadable. Only paragraphs are constrained; headings and
      layout content (stack list, contact row) use the full width. */
   --container-text: 36rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Vibe tokens.
+
+   A preset is not three colours — it is a whole character (CLAUDE.md 3.6f).
+   Colour is already handled by the three seeds; these are the other three axes,
+   collected here so a vibe can move all of them by overriding tokens and
+   nothing has to know a vibe exists.
+
+     typography  --font-display, plus the --text-display trio Tailwind already
+                 references as vars rather than inlining
+     density     --spacing, which is Tailwind v4's own base unit — every p-*,
+                 gap-* and m-* on the site derives from it, so one override
+                 rescales the whole page
+     borders     --radius, --radius-lg, --border-w
+
+   Defaults here are exactly what the site shipped before this existed, so the
+   default vibe is the absence of an override, the same way the default palette
+   is.
+   --------------------------------------------------------------------------- */
+:root {
+  /* Dark is the ground the site ships on. A light theme overrides this, which
+     is what keeps scrollbars, form controls and the canvas underlay in step
+     with the palette — without it a light theme looks broken at its edges. */
+  color-scheme: dark;
+
+  /* Two indirections, not a redefinition of the two font stacks. --font-sans
+     and --font-mono stay what they are; a vibe repoints what the page *uses*,
+     so "everything mono" is one override rather than a rewrite. */
+  --font-body: var(--font-sans);
+  --font-display: var(--font-body);
+  --radius: 2px;
+  --radius-lg: 3px;
+  --border-w: 1px;
+  --border-style: solid;
+  /* Tailwind's own border-style var, kept in step so `border-b` follows too. */
+  --tw-border-style: solid;
+  --display-case: none;
+  --display-weight: 500;
+
+  /* Layout, which an identity may move as well as colour and type. Changing
+     where the page sits is what makes a theme feel like a different site
+     rather than the same one repainted. */
+  --layout-align: left;
+  --layout-justify: flex-start;
+  /* `0` keeps the measure left-aligned; `auto` centres it. */
+  --layout-mx: 0;
+  /* Two columns puts section labels beside their content; `1fr` stacks them. */
+  --label-cols: 9rem 1fr;
+
+  /* The page ground.
+
+     Flat by default, and that default is load-bearing: a site-wide ambient
+     texture was built and removed once already because at any opacity it read
+     as noise competing with the content (CLAUDE.md, "Background"). What is
+     allowed now is a *deliberate* ground belonging to one identity, off unless
+     that identity is chosen — which is a different thing from decoration on the
+     page everyone sees. The shipped site stays flat. */
+  --vibe-bg: none;
+  --vibe-bg-size: auto;
+  --vibe-bg-repeat: repeat;
+
+  /* Panel depth. An 85% black glow reads as depth on a dark ground and as a
+     smudge on a light one, so the colour is a token the polarity can move. */
+  --shadow-color: rgb(0 0 0 / 85%);
+}
+
+/* Headings follow --font-display unless a utility says otherwise. The section
+   headings set `font-mono` explicitly and are unaffected: Tailwind's utilities
+   layer comes after base, so they still win. */
+@layer base {
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    text-transform: var(--display-case);
+  }
+}
+
+/* Tailwind inlines `1px` into these two utilities rather than referencing a
+   var, so the border-weight axis cannot reach them through the theme. Unlayered
+   on purpose: that is what lets these beat the utilities they are re-pointing.
+   The nav, the section rules and the footer all get their weight from here. */
+/* The hero follows the layout axis. Unlayered so these beat the utilities they
+   re-point — `font-medium` and the flex defaults both live in Tailwind's
+   utilities layer, and an unlayered rule outranks every layer. */
+#top {
+  text-align: var(--layout-align);
+}
+
+#top ul,
+#top .flex {
+  justify-content: var(--layout-justify);
+}
+
+#top > p {
+  margin-inline: var(--layout-mx);
+}
+
+h1 {
+  font-weight: var(--display-weight);
+}
+
+/* Section labels: beside their content, or stacked above. The columns used to
+   be a hardcoded Tailwind arbitrary value in two components, which put a real
+   layout axis out of reach of the identities. */
+@media (width >= 40rem) {
+  .label-grid {
+    grid-template-columns: var(--label-cols);
+  }
+}
+
+.border-b {
+  border-bottom-width: var(--border-w);
+  border-bottom-style: var(--border-style);
+}
+
+.border-t {
+  border-top-width: var(--border-w);
+  border-top-style: var(--border-style);
 }
 
 /* ---------------------------------------------------------------------------
@@ -189,8 +375,12 @@
 
   body {
     background-color: var(--color-bg);
+    /* `none` by default, so this costs nothing until an identity sets it. */
+    background-image: var(--vibe-bg);
+    background-size: var(--vibe-bg-size);
+    background-repeat: var(--vibe-bg-repeat);
     color: var(--color-fg);
-    font-family: var(--font-sans);
+    font-family: var(--font-body);
     font-synthesis-weight: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
@@ -200,7 +390,7 @@
   :focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
-    border-radius: 2px;
+    border-radius: var(--radius);
   }
 
   /* Section anchor targets carry tabindex="-1" so following a nav link moves
@@ -259,8 +449,8 @@
     min-height: 2.75rem;
     align-items: center;
     justify-content: center;
-    border: 1px solid var(--color-border);
-    border-radius: 3px;
+    border: var(--border-w) var(--border-style) var(--color-border);
+    border-radius: var(--radius-lg);
     background-color: var(--color-bg);
     color: var(--color-fg-muted);
     cursor: pointer;
@@ -344,10 +534,10 @@
     bottom: 0;
     min-height: 120px;
     max-height: calc(100dvh - 40px);
-    border-top: 1px solid var(--color-border-strong);
+    border-top: var(--border-w) var(--border-style) var(--color-border-strong);
     /* Lifts the panel off the page instead of letting it sit flat against it.
        Static, no animation — it is depth, not motion. */
-    box-shadow: 0 -24px 48px -24px rgb(0 0 0 / 85%);
+    box-shadow: 0 -24px 48px -24px var(--shadow-color);
   }
 
   /* Side docks. Mirrors MIN_WIDTH and SIDE_RESERVE in dock.ts. */
@@ -360,14 +550,14 @@
 
   :root[data-dock='left'] .term {
     left: 0;
-    border-right: 1px solid var(--color-border-strong);
-    box-shadow: 24px 0 48px -24px rgb(0 0 0 / 85%);
+    border-right: var(--border-w) var(--border-style) var(--color-border-strong);
+    box-shadow: 24px 0 48px -24px var(--shadow-color);
   }
 
   :root[data-dock='right'] .term {
     right: 0;
-    border-left: 1px solid var(--color-border-strong);
-    box-shadow: -24px 0 48px -24px rgb(0 0 0 / 85%);
+    border-left: var(--border-w) var(--border-style) var(--color-border-strong);
+    box-shadow: -24px 0 48px -24px var(--shadow-color);
   }
 
   /* The drag target is taller than the visible rule — a 1px grab area is a
@@ -443,7 +633,7 @@
     align-items: center;
     gap: 0.75rem;
     padding: 0.5rem 0.75rem 0.5rem 1rem;
-    border-bottom: 1px solid var(--color-border);
+    border-bottom: var(--border-w) var(--border-style) var(--color-border);
     background-color: var(--color-surface);
     color: var(--color-fg-muted);
     font-size: 11px;
@@ -479,7 +669,7 @@
     align-items: center;
     justify-content: center;
     border: 0;
-    border-radius: 2px;
+    border-radius: var(--radius);
     background: none;
     color: var(--color-fg-subtle);
     cursor: pointer;
@@ -542,7 +732,7 @@
     align-items: center;
     justify-content: center;
     border: 0;
-    border-radius: 2px;
+    border-radius: var(--radius);
     background: none;
     color: var(--color-fg-muted);
     cursor: pointer;
@@ -688,8 +878,8 @@
     min-height: 2.25rem;
     align-items: center;
     padding-inline: 0.7rem;
-    border: 1px solid var(--color-border);
-    border-radius: 2px;
+    border: var(--border-w) var(--border-style) var(--color-border);
+    border-radius: var(--radius);
     font-family: var(--font-mono);
     font-size: 11px;
     color: var(--color-fg-muted);
@@ -740,7 +930,7 @@
     gap: 0.75rem;
     margin: 0.15rem 0 0.5rem 0.4rem;
     padding-left: 0.85rem;
-    border-left: 1px solid var(--color-border-strong);
+    border-left: var(--border-w) var(--border-style) var(--color-border-strong);
   }
 
   .ax-trace pre {
@@ -757,8 +947,8 @@
     font-family: var(--font-mono);
     font-size: 10px;
     padding: 0.1rem 0.4rem;
-    border: 1px solid var(--color-border);
-    border-radius: 2px;
+    border: var(--border-w) var(--border-style) var(--color-border);
+    border-radius: var(--radius);
     color: var(--color-fg-muted);
   }
 
@@ -794,7 +984,7 @@
     align-items: center;
     padding-inline: 0.6rem;
     border: 1px dashed var(--color-border-strong);
-    border-radius: 2px;
+    border-radius: var(--radius);
     font-family: var(--font-mono);
     font-size: 11px;
     color: var(--color-fg-muted);
@@ -844,7 +1034,7 @@
      a finding reads as more serious for being calm about it. */
   .ax-finding {
     max-width: 42rem;
-    border-left: 1px solid var(--color-accent-dim);
+    border-left: var(--border-w) var(--border-style) var(--color-accent-dim);
     padding: 0.1rem 0 0.1rem 0.85rem;
   }
 
@@ -949,7 +1139,7 @@
     flex-direction: column;
     gap: 0.4rem;
     padding-top: 0.75rem;
-    border-top: 1px solid var(--color-border);
+    border-top: var(--border-w) var(--border-style) var(--color-border);
   }
 
   .ax-check {
@@ -964,8 +1154,8 @@
     min-height: 2.25rem;
     align-items: center;
     padding-inline: 1rem;
-    border: 1px solid var(--color-accent-dim);
-    border-radius: 3px;
+    border: var(--border-w) var(--border-style) var(--color-accent-dim);
+    border-radius: var(--radius-lg);
     background-color: var(--color-bg);
     font-family: var(--font-mono);
     font-size: 12px;

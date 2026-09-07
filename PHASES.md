@@ -887,93 +887,255 @@ Two harness lessons from testing this one, both cost real time:
   every later measurement was against a fake viewport and produced a convincing-looking "clipped
   nav" bug that did not exist. Reload rather than patch.
 
-### 3.6e — Customization: generated palettes
+### 3.6h — Twelve identities, six dark and six light
 
-10–14 hues generated through the existing three-seed `color-mix()` derivation, each
-contrast-validated at build time. Answers "four is not enough" without reintroducing the picker.
+Taha's escalation: every theme becomes a full vibe, half of them light, so the site has twelve
+distinct looks rather than twelve recolours — and brightness stops being a mode and becomes a
+property of an identity. Split into three parts because it is the largest slice in the project.
 
-### 3.6f — Customization: vibes
+#### 3.6h-1 — foundation — DONE
 
-Presets that change palette **plus** typography **plus** density **plus** border treatment — four
-or five named identities, each internally coherent. Still zero JS.
+- **The three-seed derivation turned out to be polarity-agnostic**, which was the thing most likely
+  to sink this. All nine derived tokens behave on a light ground with no light-specific overrides,
+  and the contrast validator needed no change either. An unplanned payoff from deriving rather than
+  hand-picking.
+- **Light grounds are measurably harder, and the numbers are worth keeping.** Contrasting against
+  near-white needs a _dark_ accent, and dark colours hold less chroma in sRGB. The same sweep used
+  for the dark set says the most chroma every hue can share is 0.091 at L=0.53 — but that lands on
+  4.6:1, AA with no headroom. L=0.45 trades colour for room: **C=0.077 at 6.6:1**, derived text
+  accent at 5.9:1. So light identities are ~40% less colourful than their dark counterparts. That
+  is the colour space, not a compromise, and it is better stated than discovered.
+- **`color-scheme` had to become a CSS property.** It was a hardcoded `<meta content="dark">`, and
+  a meta tag cannot respond to which radio is checked. Without the property a light theme keeps
+  dark scrollbars, form controls and canvas underlay — broken at the edges rather than merely
+  unusual. The meta stays as the pre-CSS default; the property overrides it.
+- **Three panel shadows were an 85% black glow** — depth on a dark ground, a smudge on a light one.
+  Now `--shadow-color`, softened to 16% for light identities.
+- **`--vibe-bg` exists and defaults to `none`.** See CLAUDE.md: the background rule is amended, not
+  dropped. What failed before was ambient texture on the page everyone sees; a ground belonging to
+  one identity, off by default, is a different thing.
+- **The vibe guard was inverted.** It required a _featured_ theme, on the reasoning that only a
+  labelled palette could be selected — no longer true now the terminal has `theme <name>`. It now
+  catches the thing still worth catching: a vibe whose id matches no theme at all.
+- **`theme` lists the polarity, and nothing else does.** `default (dark)`, `ember (light)`, with
+  `·` marking the current one. The polarity rides to the terminal as a `data-polarity` attribute on
+  each radio rather than by importing `themes.ts`, which would drag the whole OKLab conversion into
+  the terminal chunk to answer a question the markup already knows.
+- **The boundary that keeps this from being a light/dark toggle**, asserted in tests: the default is
+  dark, all four featured themes are dark, and every light theme is unlisted. There is no brightness
+  control anywhere on the recruiter path.
+- Verified in the browser: a light identity renders correctly end to end — hero, nav, chips, the
+  permission sandbox and the terminal panel all follow, with no component-level light handling.
+- **Font baseline recorded for 3.6h-2:** the default page fetches exactly two font files, 87KB. A
+  new `@font-face` must not change that number until its identity is selected — the claim that
+  per-vibe typefaces are free rests on it, so it gets measured rather than assumed.
 
-**Parked, not cut:** reordering and hiding sections. Revisit after 3.6f.
+#### 3.6h-2 — the six shapes — DONE
 
-**Decided against:** a share link that encodes edited _content_ — it is a defacement vector aimed
-at Taha personally. Palette-only would be harmless.
+Six identities that differ in typeface, ground, borders, corners and density. Every dark theme is
+now a shape; `default` is the sixth by absence of any override.
 
----
+| shape         | theme   | typeface       | ground        | borders    | corners  |
+| ------------- | ------- | -------------- | ------------- | ---------- | -------- |
+| **clean**     | default | Inter          | flat          | 1px        | 2px      |
+| **terminal**  | amber   | JetBrains Mono | scanlines     | 1px        | square   |
+| **editorial** | azure   | Newsreader     | flat          | 1px        | square   |
+| **brutal**    | violet  | Archivo, caps  | flat          | **3px**    | square   |
+| **blueprint** | teal    | Space Grotesk  | drafting grid | **dashed** | square   |
+| **soft**      | crimson | Nunito         | accent wash   | 1px        | **14px** |
 
-## Phase 4 — Return Experience
+- **The claim the whole plan rested on is now measured, not assumed.** A `@font-face` whose family
+  no rendered text matches is never fetched, so four extra typefaces cost the default path nothing.
+  Verified in the browser: the default page fetches **exactly 2 font files**, and selecting the
+  editorial identity fetches Newsreader — a third — and only then. 149KB of typefaces, none of it
+  on the recruiter path. A test also asserts no default-path rule references an identity face,
+  because one accidental reference would fetch it for everybody.
+- **Grounds are built from `color-mix` on the seeds**, never fixed colours, so a grid or a wash
+  follows the palette and inverts with the polarity for free in 3.6h-3. Asserted.
+- **Two more tokens were needed**: `--border-style` (blueprint is dashed) and `--display-case`
+  (brutal is uppercase). Tailwind keeps its own `--tw-border-style` for the border utilities, so a
+  shape sets both or the section rules stay solid while the components go dashed.
+- **`background-attachment: fixed` was dropped.** It gives the nicest result for a wash but forces
+  a repaint on every scroll of a 2,600px page, which is the wrong trade on a site with a hard
+  performance constraint. Grounds tile or use `no-repeat` instead.
+- **The hero was re-measured for all six shapes at 360 and 390** — no h1, nav or page overflow
+  anywhere. This is the check that has bitten twice before: a serif at display size runs to 47px
+  where Inter runs to 39, and Archivo and Newsreader have very different metrics.
+- One false alarm worth recording: brutal's résumé button _looked_ clipped in a screenshot. It sits
+  at 1243–1329 with **192px of slack** — a capture artifact, not overflow. Measure before believing
+  a JPEG.
+- Two shapes (**blueprint**, **soft**) are on unlisted themes, so they are terminal-only. That
+  inverted an earlier build guard which required a vibe to be on a _featured_ theme — true when
+  only labelled palettes could be selected, false once `theme <name>` existed.
 
-**Goal:** light reason to come back, without pressure mechanics.
+#### 3.6h-3 — the light twins — DONE
 
-**No backend** — this phase is entirely localStorage. No sync, no remote store, no service.
+Twelve identities from six designs. Every shape is worn twice — once on a dark ground, once on a
+light one.
 
-Build (one at a time, approval between each):
+| shape         | dark    | light  | pairing                                      |
+| ------------- | ------- | ------ | -------------------------------------------- |
+| **clean**     | default | fern   | what ships, and its daylight equivalent      |
+| **terminal**  | amber   | ember  | amber phosphor / a receipt printer           |
+| **editorial** | azure   | moss   | a magazine, and the paper it is printed on   |
+| **brutal**    | violet  | orchid | the pair that differs least — heavy is heavy |
+| **blueprint** | teal    | indigo | pale lines on dark / a real whiteprint       |
+| **soft**      | crimson | rose   | a wash of the accent, either way             |
 
-1. Anonymous visitor ID, generated client-side, kept in localStorage
-2. Interaction/unlock-flag persistence in localStorage, read after first paint
-3. Returning-visitor message + one small rotating discovery
-   - **No terminal command for this.** `whoami` was cut at Taha's request; the returning-visitor
-     surface is the page itself, not a command.
-4. Public repo link ("view source"), if not already placed in Phase 1
+- **A shape is defined once and worn twice.** `SHAPES` is keyed by design and `SHAPE_OF` maps
+  themes onto it, so a pair literally shares one object — twelve separate definitions would have
+  been twelve chances for a pair to drift apart, and the pairing is the whole idea. Asserted by
+  identity (`===`), not by comparing values.
+- **The grounds inverted for free, exactly as designed** — and this was the part I expected to need
+  tuning. Because every ground is `color-mix` on `--color-fg` or `--color-accent` rather than a
+  fixed colour, the blueprint grid becomes pencil lines on paper, the scanlines become a faint
+  weave on warm white, and the soft wash becomes a blush instead of a dark smear. Nothing needed a
+  light-specific value. Had any ground hardcoded a colour, all three would have needed doubling.
+- **`clean` is still the absence of every override**, on both grounds: `default` and `fern` set
+  nothing but their seeds. That keeps the shipped site the thing the other five depart from.
+- **All twelve measured at 360 and 390** — no hero, nav or page overflow. Six typefaces, display
+  sizes from 28px (mono) to 47px (serif), and nothing breaks.
+- **Cost: 1,061 bytes gzipped for all twelve identities** (5,205 raw — highly repetitive selectors
+  compress hard). A raw-byte assertion failed the moment the identities became complete, which was
+  the assertion being wrong rather than the CSS: raw bytes never ship. It tests the gzipped figure
+  now.
 
-Achievements are still deferred (Phase 5) — this phase persists the underlying flags, not a
-list. Getting the flags right here is what makes Phase 5 cheap.
+#### 3.6h-4 — pushed much further, at Taha's request — DONE
 
-**Prompt:**
+The six looks were "clean but tame". His brief: make selecting a theme feel like _a whole new site
+opened_, and group the pairs so the twelve read as six. Both done.
 
-> Plan Phase 4 from PHASES.md: visitor state and the returning-visitor experience per CLAUDE.md.
-> There is no backend — localStorage only, no sync, no remote store. Confirm it never blocks
-> first paint and that there's no streak/daily-reward mechanic. Include adding a "view source"
-> link to the repo if it isn't already there. Achievements stay deferred: persist the flags, not
-> an achievement list. Build one step at a time and stop for my approval after each.
+- **Layout became an axis, which is what the set was missing.** Colour, type and spacing are a
+  repaint; moving where the page _sits_ is a different site. Three new levers, all zero-JS:
+  `--layout-align` / `--layout-justify` (the hero centres), `--layout-mx` (the measure centres with
+  it), and `--label-cols` (section labels sit beside their content, or stack above it).
+  - This required unpicking a hardcoded `sm:grid-cols-[9rem_1fr]` in Stack and Contact — a real
+    layout axis was sitting inside a Tailwind arbitrary value where no identity could reach it.
+    Both now share a `.label-grid` class driven by the token.
+- **`--display-weight` too**, because `font-medium` is a utility and utilities outrank layers.
+  Unlayered `h1 { font-weight: var(--display-weight) }` re-points it, the same trick `.border-b`
+  uses. Editorial is 300, brutal is 900 — the same typeface at those two weights is barely the same
+  typeface.
+- **The grounds got much richer**, since the crimson wash was the thing Taha liked most. They are
+  multi-layer now: terminal pools an accent glow out of the top _and_ keeps its scanlines,
+  blueprint has a heavy major gridline every fifth square so the sheet has structure, brutal has
+  hard diagonal bands, and soft is a three-stop wash that fades accent into foreground rather than
+  a single flat tint.
+- **What the six became:** clean is unchanged and restrained on purpose. Terminal is a CRT.
+  Editorial is a magazine cover — 96px thin serif, centred, labels stacked. Brutal is a poster —
+  Archivo 900 uppercase at 76px on diagonal bands. Blueprint is a drafting sheet. Soft is centred,
+  rounded at 20px, on a three-stop gradient.
+- **The listing groups by look**, so the twelve read as six designs on two grounds rather than
+  twelve unrelated names, and `HUES` is ordered in pairs so that holds everywhere and not only
+  where the terminal makes it explicit.
+- **All twelve re-measured at 390 and 360** — no hero, nav or page overflow. This mattered more
+  than usual: display sizes now run to 96px on desktop, and the clamp floors had to be checked
+  against the smallest screen rather than assumed.
+- Tests now assert the _brief_, not just the mechanism: every look must move type **and** either
+  the layout or the ground. Colour and spacing alone would pass a token-diff check and still be a
+  repaint.
 
----
+**Phase 3.6 is complete.** Three pillars — the Permission Sandbox, the terminal, and customization
+— all built.
 
-## Phase 5 — Achievements (designed last, from the finished site)
+### 3.6e — Customization: generated palettes — DONE
 
-**Goal:** now that the site actually exists, work out what's worth rewarding and build it. This
-phase is deliberately last-but-one: the list is derived from the real moments the finished site
-offers, not invented up front. Nothing in Phases 1–4 should have shipped achievement UI.
+Four hand-picked presets became **twelve**: one hand-picked `default` plus eleven generated from a
+single hue each. The generator, the contrast validation and every per-palette CSS rule live in
+`src/data/themes.ts`, which stays import-free so Node can load it directly — 47 assertions.
 
-Precondition: Phases 1–4 are done and the unlock-worthy moments are already recorded as plain
-flags/events (Phase 3 step-by-step, persisted in Phase 4). If they aren't, wire that first.
+- **OKLCH in, hex out.** OKLCH because its lightness is perceptually uniform: in HSL one recipe
+  makes yellow far brighter than blue, so contrast would swing across the wheel and some hues
+  would land under the floor while others washed out. Converted at build time rather than emitting
+  `oklch()`, so the value that is validated is exactly the value the browser paints.
+- **The recipe's lightness was found by measurement, and that was the whole job.** A fixed chroma
+  is not achievable at every hue, because sRGB is not equally wide around the wheel. The first
+  attempt (L=0.82, C=0.145) clipped seven of eleven hues and left the set visibly uneven — indigo
+  down at C=0.089 while amber held 0.145, a 63% spread, with teal landing on pure `#00e0e0`.
+  Sweeping L and taking the _minimum_ achievable chroma across all hues shows a clear optimum:
+  below L=0.74 teal is the limiting hue, above it indigo is, and the two curves cross at 0.74
+  where every hue can hold C=0.126. Every generated accent is now L=0.740 ±0.001, C=0.125 ±0.002,
+  no clipped channels, 8.0–8.9:1 on its own background.
+- **Clipping is a correctness bug, not a rounding detail** — it moves hue as well as chroma, so
+  the generated blue stops being the requested blue. Chroma is binary-searched down until the
+  colour fits, and a test asserts no accent sits on the sRGB boundary.
+- **The derived text token is validated now, not assumed.** `--color-accent-soft` is a runtime
+  `color-mix(in oklab, accent 65%, fg-muted)` that carries small text, so it is the one derived
+  value that can quietly drop under AA. The oklab mix is reproduced at build time and checked; it
+  lands 7.2–7.8:1 across the set. Four palettes could be measured by hand, twelve cannot.
+- **`default` is not generated**, so tuning the recipe can never move the colours the site ships.
+  Selecting it remains the absence of an override.
+- **Swatches were built and reverted.** Twelve colour chips replaced the text labels, and Taha
+  preferred the names — correctly: "amber" and "azure" say what they are, where a dozen anonymous
+  squares make you click each one to find out. The named labels are back exactly as they were.
+- **The source view shows four; the terminal reaches twelve.** Rather than crowd a strip meant to
+  be quiet, only `default`, `amber`, `azure` and `violet` get a label. The other eight are
+  **unlisted, not removed** — `theme <name>` selects any of them. That falls out of the existing
+  markup for free: radios and labels were already separate so `~` could reach the header, so all
+  twelve radios render and only four are labelled, and an unlabelled radio is still checkable.
+  The terminal reads the radios rather than keeping its own list, so the two cannot disagree about
+  what exists.
+  - Every palette keeps its **seed rule** and its **contrast readout** whether featured or not:
+    without the first, a terminal-selected palette would silently do nothing; without the second,
+    the mandatory figures would be wrong. Both asserted.
+- **Three hand-written sibling-combinator blocks are now generated.** They were four lines each
+  and would have been thirty-six; a sibling combinator cannot be parameterised in CSS, so the
+  choice was generating them or maintaining them by hand, which is the drift this file exists to
+  prevent.
+- **Still zero JS.** Verified rather than assumed: after clicking a swatch, `:root` carries no
+  inline style, so the recolouring is `html:has(#theme-x:checked)` and nothing else.
+- **Cost:** the whole palette system is 3,427 bytes raw, ~698 gzipped, for twelve palettes.
 
-Build, one step at a time with approval between each:
+One finding worth keeping: **a hex cannot round-trip a precise hue at low chroma.** 8 bits a
+channel is about 0.003 in OKLab a/b, so the angular error is `atan(step / C)` — 0.03° at C=0.125
+but 2.2° at C=0.012. A round-trip test with a fixed hue tolerance fails on the near-neutral seeds
+and looks like a conversion bug; it is the format's limit. The tolerance scales with chroma now.
 
-1. **Audit + propose the list** — no code. Walk the finished site, inventory every real moment a
-   visitor can reach (terminal, each API Simulation stage, bug icon, easter eggs, return visit,
-   whatever else exists by then), and propose a flat list ordered easy → hard. **Taha approves
-   the list before any of it gets built.** Expect to cut more than you keep; a short list of real
-   moments beats a padded one.
-2. **Unlock plumbing** — map the approved list onto the existing flags. Add flags for anything
-   the audit found that isn't tracked yet. localStorage only, no backend, per CLAUDE.md.
-3. **`/achievements` page** — the flat ordered list, locked entries shown as `???`.
-4. **Entry icon** — small, muted/low-opacity, more visible on hover, no idle animation, no
-   counter or achievement mention anywhere on the homepage.
-5. **Unlock feedback** — graceful and one-time (quiet icon state change or a brief notice),
-   never looping or flashing.
+### 3.6f — Customization: vibes — DONE
 
-Locked rules that still apply: flat list, no categories, `???` for locked, no homepage mention.
-See CLAUDE.md's Achievements section — it is the authority.
+The featured four stopped being palettes and became **identities**: `default`, `amber`, `azure`,
+`violet`, each carrying typography, density and border treatment on top of its colours. The names
+stay colour names at Taha's request. Still zero JS — the same radio group, more tokens.
 
-**Prompt:**
+|         | typeface | display  | section rhythm | border  | corners | page height |
+| ------- | -------- | -------- | -------------- | ------- | ------- | ----------- |
+| default | Inter    | 60px     | 96px           | 1px     | 2px     | 2292px      |
+| amber   | **mono** | 44px     | 84px           | 1px     | square  | 2097px      |
+| azure   | Inter    | **72px** | 115px          | 1px     | square  | 2602px      |
+| violet  | Inter    | 60px     | 92px           | **2px** | square  | 2238px      |
 
-> Plan Phase 5 from PHASES.md: achievements. Read CLAUDE.md's Achievements section first — the
-> old draft chain (Hello World / Explorer / etc.) is withdrawn, do not resurrect it. Start with
-> the audit only: walk the finished site, inventory the real moments a visitor can actually
-> reach, and propose a flat list ordered easy → hard for my approval. Do not write any
-> achievement code until I've approved the list. Then build the plumbing, the /achievements page,
-> the entry icon, and unlock feedback as separate approval steps. Keep it code-split and
-> localStorage-only — there is no backend.
+A 24% swing in page height between the densest and airiest. Amber reads as an amber-phosphor
+terminal, azure as an editorial spread — the same site with a different character, which is what
+"the vibe can be changed" was supposed to mean.
 
----
-
-## Phase 6 — Polish + README
-
-**Goal:** only after everything above works end to end.
+- **Density was nearly free, and that was the enabling discovery.** Tailwind v4 emits
+  `--spacing: .25rem` and every one of the 33 spacing utilities on the site derives from it, so
+  one override rescales the whole page. No per-component work.
+- **But it missed the biggest spacing on the page.** `--spacing-section` was a fixed 6rem, so
+  section rhythm ignored the density axis — the measurement showed 96px padding under every vibe.
+  Deriving it as `calc(var(--spacing) * 24)` fixes that and is exactly 6rem at the default, so
+  nothing shipped changes.
+- **Tailwind inlines `1px` into `.border-b` and `.border-t`** rather than referencing a var, so
+  the border-weight axis could not reach the nav, the section rules or the footer. Re-pointed by
+  an unlayered rule, the same trick `themeCss` already uses to beat `@layer theme`. Verified:
+  violet doubles all three.
+- **Typography goes through two new indirections**, `--font-body` and `--font-display`, rather
+  than redefining `--font-sans`/`--font-mono`. The stacks stay what they are and a vibe repoints
+  what the page uses, so "everything mono" is a single declaration.
+- **A mono vibe has to shrink its display size.** JetBrains Mono at the default clamp is far wider
+  than Inter and the hero overflows a phone. Amber's clamp is pulled down accordingly, and the
+  hero and nav were measured for **every vibe at 360 and 390** — no overflow anywhere, which is
+  the check that would have caught it.
+- **26 hardcoded values became tokens** — 11 radii and 15 border widths. Three were deliberately
+  left alone: the 50% status dot (a circle), and the dock glyph's `1px solid currentColor` plus
+  its 1px radius, which are an icon drawn out of borders rather than chrome.
+- **A vibe on an unlisted palette throws at build.** Only the featured four have a label, so only
+  they can be selected; a vibe anywhere else is dead weight that looks like a feature.
+- Tests assert the thing that actually matters: **no two vibes emit the same declarations**, and
+  each moves at least two axes beyond colour. Four names for one design would otherwise pass.
+- **Cost:** the whole palette-and-vibe system is 2,460 bytes raw. No new fonts — a third typeface
+  would be 20–30KB against a hard performance constraint, and mono-vs-sans plus scale and tracking
+  already carries more character than a third family would.
 
 ### Required
 
