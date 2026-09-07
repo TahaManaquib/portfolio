@@ -158,6 +158,23 @@
   --color-accent-soft: color-mix(in oklab, var(--color-accent) 65%, var(--color-fg-muted));
   --color-accent-faint: color-mix(in oklab, var(--color-accent) 15%, var(--color-bg));
 
+  /* Scrollbars. A `color-mix` on the seeds like everything else, so all twelve
+     identities recolour their scrollbars for free and a light ground inverts
+     with no light-specific values.
+
+     A scrollbar is a non-text UI component, so the bar is WCAG 1.4.11's 3:1,
+     not 4.5:1.
+
+     **54%, and the number is measured rather than picked.** This was
+     --color-fg-subtle (44%) first, which is 3.2:1 on the dark ground and looked
+     fine — and then failed on all six light identities at 2.77-2.79:1, because
+     the same mix is not the same contrast when the ground is pale. 50% lands on
+     exactly 3.00, which is no margin at all; 54% is the first step with real
+     room, at 3.35:1 worst case across the twelve. Asserted per theme, against
+     both the page ground and a panel's surface. */
+  --color-scroll-thumb: color-mix(in oklab, var(--color-fg) 54%, var(--color-bg));
+  --color-scroll-thumb-hover: var(--color-fg-muted);
+
   /* Typography */
   --font-sans:
     'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -348,6 +365,71 @@ h1 {
    Base layer
    --------------------------------------------------------------------------- */
 @layer base {
+  /* ---------------------------------------------------------------------
+     Scrollbars.
+
+     **Only one of the two inherits, which is the trap here.** `scrollbar-color`
+     is an inherited property, so one declaration on :root reaches every scroll
+     container. `scrollbar-width` is *not* — set on :root alone it styled the
+     page bar and left the terminal's scrollback, the achievements list and the
+     source view on the 15px platform default, correctly coloured and the wrong
+     size. Measured, not read: `getComputedStyle(list).scrollbarWidth` said
+     `auto` while :root said `thin`. Hence the universal selector.
+
+     Every one of the twelve identities recolours them for free, light grounds
+     included, because the tokens are `color-mix` on the seeds like everything
+     else.
+
+     `thin` rather than a custom width: the standard property is what Firefox
+     and Chrome 121+ implement, and a scrollbar that keeps the platform's own
+     sizing is one fewer thing to get wrong at a zoom level nobody tested.
+
+     The track is transparent on purpose. The panels sit on `--color-surface`
+     and the page on `--color-bg`, and a transparent track takes whichever it
+     is standing on rather than needing a rule per container.
+     --------------------------------------------------------------------- */
+  :root {
+    scrollbar-color: var(--color-scroll-thumb) transparent;
+  }
+
+  /* Not inherited, so it has to be said everywhere. This is also what removes
+     the stepper arrows: they belong to the platform's `auto` scrollbar, and a
+     `thin` one has none. */
+  *,
+  ::backdrop {
+    scrollbar-width: thin;
+  }
+
+  /* Safari, which did not support `scrollbar-color` until 18.4, and older
+     Chromium. Where both are understood the standard property wins, so this is
+     a fallback rather than a second design. `background-clip` insets the thumb
+     without a border colour that would have to know its background. */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  /* No stepper arrows in the fallback either. */
+  ::-webkit-scrollbar-button {
+    display: none;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background-color: var(--color-scroll-thumb);
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-scroll-thumb-hover);
+  }
+
   html {
     scroll-behavior: smooth;
     /* Anchor nav must not tuck section headings under the sticky nav. The nav
@@ -653,13 +735,49 @@ h1 {
     color: var(--color-fg);
   }
 
+  /* Text size. Sits before the dock controls and stays on narrow screens,
+     where being able to shrink the scrollback matters more than on a desktop —
+     unlike the dock glyphs, which are hidden there because a side dock is not
+     offered at that width anyway. */
+  .term-font {
+    display: flex;
+    gap: 0.15rem;
+    margin-left: auto;
+  }
+
+  .term-font button {
+    display: inline-flex;
+    min-width: 1.75rem;
+    min-height: 1.75rem;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: var(--radius);
+    background: none;
+    color: var(--color-fg-subtle);
+    font-family: inherit;
+    /* Fixed: the chrome must not scale with the thing it is scaling. */
+    font-size: 11px;
+    cursor: pointer;
+    transition: color 150ms ease;
+  }
+
+  .term-font button:hover:not(:disabled),
+  .term-font button:focus-visible:not(:disabled) {
+    color: var(--color-fg);
+  }
+
+  .term-font button:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
   /* Dock controls. Three glyphs drawn in CSS rather than shipped as icons —
      each is a rectangle with one thick edge, so the row reads as a small map of
      where the panel can sit. */
   .term-docks {
     display: flex;
     gap: 0.25rem;
-    margin-left: auto;
   }
 
   .term-dock {
@@ -758,8 +876,6 @@ h1 {
     /* The empty area below the last line focuses the input, like a real
        terminal, so the whole panel behaves as one click target. */
     cursor: text;
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border-strong) transparent;
   }
 
   .term-line {
@@ -1257,6 +1373,447 @@ h1 {
 }
 
 /* ---------------------------------------------------------------------------
+   Unlock notices.
+
+   Created on demand by whichever island awarded the achievement, so this costs
+   the recruiter path nothing and a visitor who never opens anything never sees
+   one.
+
+   Stacked just above the door, which is deliberate: the notice gestures at
+   where the door is without linking to it, so finding it stays the achievement
+   it is. One fade in, a hold, one fade out — nothing loops and nothing flashes
+   (CLAUDE.md).
+   --------------------------------------------------------------------------- */
+.ac-notices {
+  position: fixed;
+  left: 1rem;
+  bottom: 4.25rem;
+  z-index: 70;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.4rem;
+  /* Never intercepts a click — it is an aside, not a control. */
+  pointer-events: none;
+}
+
+/* A card, not a line.
+   
+   The first version was one small mono line, which on a page this quiet was
+   easy to miss entirely — the whole point is that something visibly happened.
+   An icon, a kicker, the name and what you did give it enough weight to catch
+   the eye without becoming a modal. */
+.ac-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  max-width: min(20rem, calc(100vw - 2rem));
+  padding: 0.7rem 0.9rem 0.75rem;
+  border: var(--border-w) var(--border-style) var(--color-accent-dim);
+  border-left-width: 3px;
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+  box-shadow: 0 12px 32px -12px var(--shadow-color);
+  /* Animated on insert rather than transitioned from a JS-set attribute: rAF is
+     paused in a backgrounded tab, so a transition trigger meant an achievement
+     earned while the tab was unfocused produced a notice nobody ever saw. */
+  animation: ac-notice-in 260ms ease both;
+}
+
+.ac-notice[data-leaving] {
+  animation: ac-notice-out 240ms ease both;
+}
+
+@keyframes ac-notice-in {
+  from {
+    opacity: 0;
+    /* A short rise from the corner it belongs to, not a slide across the page. */
+    transform: translateY(0.5rem) scale(0.98);
+  }
+}
+
+@keyframes ac-notice-out {
+  to {
+    opacity: 0;
+    transform: translateY(0.25rem);
+  }
+}
+
+.ac-notice-mark {
+  display: inline-flex;
+  padding-top: 0.1rem;
+  color: var(--color-accent);
+}
+
+.ac-notice-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.ac-notice-kicker {
+  margin: 0;
+  color: var(--color-accent-soft);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.ac-notice-title {
+  margin: 0;
+  color: var(--color-fg);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.ac-notice-moment {
+  margin: 0;
+  color: var(--color-fg-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+/* ---------------------------------------------------------------------------
+   The achievements panel.
+
+   The third corner control, and what replaced the /achievements route. It
+   stacks above the door it belongs to, in the corner opposite the terminal and
+   source-view controls.
+
+   Everything here is created at runtime by src/islands/achievements/panel.ts,
+   so none of it costs the recruiter path anything — but it lives in the global
+   stylesheet rather than in the chunk because an island cannot carry Astro
+   scoped styles, and injecting a <style> from JavaScript is a worse version of
+   the same thing.
+
+   It is non-modal: no backdrop, no scrim, nothing inert behind it. The terminal
+   stays usable beside it on purpose — watching a row tick over while you work
+   is the best moment this feature has.
+   --------------------------------------------------------------------------- */
+.ac-panel {
+  position: fixed;
+  left: 1rem;
+  bottom: 4.25rem;
+  z-index: 60;
+  display: none;
+  width: min(25rem, calc(100vw - 2rem));
+  /* Bounded so it can never swallow the page, and scrolls inside instead. The
+     bottom offset is subtracted twice: once for the door below it, once so it
+     never reaches the top edge. */
+  max-height: min(32rem, calc(100dvh - 6.5rem));
+  flex-direction: column;
+  border: var(--border-w) var(--border-style) var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+  box-shadow: 0 16px 40px -12px var(--shadow-color);
+}
+
+.ac-panel[data-open] {
+  display: flex;
+  animation: ac-panel-in 180ms ease both;
+}
+
+/* Same reasoning as the unlock notice: an animation on insert plays whenever
+   the tab is painted, where a JS-triggered transition would not. */
+@keyframes ac-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.4rem) scale(0.99);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ac-panel[data-open] {
+    animation: none;
+  }
+}
+
+.ac-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 1rem 1.15rem 0.6rem;
+}
+
+.ac-panel-title {
+  margin: 0;
+  color: var(--color-fg-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ac-panel-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Small mark, full target (WCAG 2.5.8). Pulled tight against the corner so
+     the padding does not push the heading off-centre. */
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  margin: -0.35rem -0.35rem -0.35rem 0;
+  border: none;
+  background: none;
+  color: var(--color-fg-subtle);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.ac-panel-close:hover,
+.ac-panel-close:focus-visible {
+  color: var(--color-fg);
+}
+
+.ac-panel-intro {
+  margin: 0;
+  padding: 0 1.15rem;
+  color: var(--color-fg-subtle);
+  font-size: 12px;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.ac-panel .ac-progress {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.85rem;
+  padding: 1.15rem 1.15rem 1rem;
+}
+
+.ac-panel .ac-pips {
+  display: flex;
+  gap: 0.38rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A found one fills in. Size and fill as well as colour, so the row of pips
+   still reads without relying on hue (WCAG 1.4.1). */
+.ac-panel .ac-pip {
+  width: 0.4rem;
+  height: 0.4rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 50%;
+}
+
+.ac-panel .ac-pip[data-found] {
+  border-color: var(--color-accent);
+  background-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-faint);
+}
+
+.ac-panel .ac-count {
+  margin: 0;
+  color: var(--color-fg-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+.ac-panel .ac-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  /* The right inset is smaller so the scrollbar sits in the gap rather than
+     over the text, now that the list has a visible one. */
+  padding: 0 0.65rem 0 1.15rem;
+  list-style: none;
+  overflow-y: auto;
+  /* Stops the wheel chaining to the page at either end of the list — the same
+     containment the terminal's scrollback needs, for the same reason. */
+  overscroll-behavior: contain;
+}
+
+/* Two lines per row. A title and its description side by side in one mono size
+   read as an undifferentiated block, with nothing marking where a row began. */
+.ac-panel .ac-row {
+  display: grid;
+  grid-template-columns: 1.35rem minmax(0, 1fr);
+  align-items: start;
+  gap: 0.25rem 0.7rem;
+  padding-block: 0.8rem;
+  border-bottom: var(--border-w) var(--border-style) var(--color-border);
+}
+
+.ac-panel .ac-row:last-child {
+  border-bottom: none;
+}
+
+.ac-panel .ac-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 0.1rem;
+  color: var(--color-fg-subtle);
+}
+
+/* One of the two marks shows at a time. The glyph differs as well as the
+   colour, so earned state never rests on hue alone. */
+.ac-panel .ac-mark svg:first-child {
+  display: block;
+}
+
+.ac-panel .ac-mark svg:last-child {
+  display: none;
+}
+
+.ac-panel .ac-row[data-earned] .ac-mark {
+  color: var(--color-accent);
+}
+
+.ac-panel .ac-row[data-earned] .ac-mark svg:first-child {
+  display: none;
+}
+
+.ac-panel .ac-row[data-earned] .ac-mark svg:last-child {
+  display: block;
+}
+
+.ac-panel .ac-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.ac-panel .ac-label {
+  color: var(--color-fg-muted);
+  font-size: 13.5px;
+  line-height: 1.35;
+}
+
+.ac-panel .ac-moment {
+  color: var(--color-fg-subtle);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+/* Found: the title comes forward. Everything stays legible either way — the
+   list is a checklist of what is left, not a wall of mystery. */
+.ac-panel .ac-row[data-earned] .ac-label {
+  color: var(--color-fg);
+}
+
+.ac-panel .ac-row[data-earned] .ac-moment {
+  color: var(--color-fg-muted);
+}
+
+.ac-panel-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1.15rem 0.9rem;
+  border-top: var(--border-w) var(--border-style) var(--color-border);
+}
+
+.ac-panel-note {
+  margin: 0;
+  color: var(--color-fg-subtle);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+/* Deliberately the quietest control in the panel. It destroys something the
+   visitor built, so it should never be the thing the eye lands on — and it
+   asks once before doing it (see resetControl in panel.ts). */
+.ac-reset {
+  flex-shrink: 0;
+  padding: 0.3rem 0.55rem;
+  border: var(--border-w) var(--border-style) var(--color-border);
+  border-radius: var(--radius);
+  background: none;
+  color: var(--color-fg-subtle);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color 150ms ease,
+    border-color 150ms ease;
+}
+
+.ac-reset:hover,
+.ac-reset:focus-visible {
+  color: var(--color-fg-muted);
+  border-color: var(--color-border-strong);
+}
+
+/* Armed. The only warm colour in the panel, and it lasts four seconds. */
+.ac-reset[data-armed] {
+  color: var(--color-fg);
+  border-color: var(--color-fg-subtle);
+}
+
+/* ---------------------------------------------------------------------------
+   The door — the achievements toggle.
+
+   Opposite corner to the terminal and source-view controls, so the two visible
+   affordances stay together and this one does not read as a third button in a
+   row. Barely visible by default and fully visible on hover or focus — findable
+   by looking, not by being told.
+
+   It is an anchor and nothing else. No script reads whether anything has been
+   earned: doing that here would put content JavaScript on the recruiter path,
+   which is the one thing the whole flag design exists to avoid.
+   --------------------------------------------------------------------------- */
+.door {
+  position: fixed;
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 50;
+  display: inline-flex;
+  cursor: pointer;
+  /* Same box as the terminal and source-view controls opposite, so it reads as
+     one of the set. Full tap target regardless of the mark inside (WCAG 2.5.8). */
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border: var(--border-w) var(--border-style) var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-bg);
+  color: var(--color-fg-muted);
+  /* Dimmer than its counterparts across the page: still meant to be found
+     rather than offered. Not zero — invisible is not the same as unobtrusive,
+     and an icon nobody can find is a feature that does not exist. */
+  opacity: 0.22;
+  transition:
+    opacity 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease;
+}
+
+.door:hover,
+.door:focus-visible,
+.door[aria-expanded='true'] {
+  opacity: 1;
+  color: var(--color-accent);
+  border-color: var(--color-accent-dim);
+}
+
+/* A visitor who has asked for less motion still gets the reveal, just without
+   the fade — the opacity change is the affordance, not decoration. */
+@media (prefers-reduced-motion: reduce) {
+  .door {
+    transition: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
    Terminal docking — the page's half of it.
 
    The island publishes two things to :root and nothing else: `data-dock` (which
@@ -1304,10 +1861,109 @@ h1 {
   --dock-push-w: var(--dock-w);
 }
 
+/* Lit while the panel is open, like the source-view control opposite and the
+   achievements door across the page.
+
+   It lives here rather than in TerminalLoader.astro's scoped block because
+   every other rule that styles this button from outside the component — the
+   dock offsets below — is already in this file, and a state driven by an
+   attribute on <html> belongs with them rather than behind a `:global()`.
+
+   Keyed on the root attribute, not on `aria-expanded`, so it is right no matter
+   what opened the panel — the button, ⌘K, `open <section>`, or `Esc` — and
+   needs no JavaScript to stay in step. `aria-expanded` is maintained separately
+   in mount.tsx for assistive tech. */
+:root[data-term-open] .terminal-open {
+  color: var(--color-accent);
+  border-color: var(--color-accent-dim);
+}
+
 /* The two corner controls are position: fixed, so body padding does not move
    them and a right-hand dock would slide underneath. The page beside the panel
    is meant to stay usable, so they step aside. */
 :root[data-term-open][data-dock='right'] .source-toggle,
 :root[data-term-open][data-dock='right'] .terminal-open {
   right: calc(1rem + var(--dock-w));
+}
+
+/* The same for the other corner, which had no such rule and needed one: a
+   left-docked terminal slid underneath the door, the unlock notices and the
+   achievements panel. Only noticed once the panel moved into that corner —
+   before that the door was a 44px square that happened to sit on top. */
+:root[data-term-open][data-dock='left'] .door,
+:root[data-term-open][data-dock='left'] .ac-notices,
+:root[data-term-open][data-dock='left'] .ac-panel {
+  left: calc(1rem + var(--dock-w));
+}
+
+/* A bottom dock covers that corner outright, so the stack rides above it.
+   
+   This applies to all four fixed controls, not just the door. Only the *right*
+   dock had a rule before, which meant a bottom-docked terminal — the default —
+   drew itself straight over its own open button and the source-view toggle. The
+   terminal could be opened by the button and then only closed with `Esc` or the
+   panel's own control, because the button it came from was underneath the
+   panel. Found while making that button a toggle: a toggle you cannot see or
+   reach is not one. */
+:root[data-term-open][data-dock='bottom'] .door {
+  bottom: calc(1rem + var(--dock-h));
+}
+
+:root[data-term-open][data-dock='bottom'] .source-toggle {
+  bottom: calc(1rem + var(--dock-h));
+}
+
+:root[data-term-open][data-dock='bottom'] .terminal-open {
+  bottom: calc(4.5rem + var(--dock-h));
+}
+
+:root[data-term-open][data-dock='bottom'] .ac-notices,
+:root[data-term-open][data-dock='bottom'] .ac-panel {
+  bottom: calc(4.25rem + var(--dock-h));
+}
+
+/* Both offsets at once would push the panel past the top of a short viewport,
+   so its height budget has to know about the dock as well. */
+:root[data-term-open][data-dock='bottom'] .ac-panel {
+  max-height: min(32rem, calc(100dvh - 6.5rem - var(--dock-h)));
+}
+
+/* A bottom dock at its default half-height leaves the panel about 280px, and
+   the fixed chrome ate nearly all of it — one visible row above a footer, which
+   reads as broken rather than as tight. The intro is orientation for a
+   first-time reader; when the space is this scarce the list is what matters, so
+   the sentence goes and the rows get the room. Only the bottom dock does this:
+   a side dock takes width, which the panel has to spare. */
+:root[data-term-open][data-dock='bottom'] .ac-panel-intro {
+  display: none;
+}
+
+/* Same reasoning applied to the rest of the fixed chrome. Hiding the intro
+   alone recovered ~40px and still left one visible row: the head, the progress
+   strip and the footer together were taking 160 of the 240px available. The
+   note goes (the reset button it sits beside does not), and the paddings come
+   in. This is the one place the panel is allowed to look cramped, because at a
+   half-height terminal on a laptop it genuinely is — dragging the terminal down
+   gives it back immediately. */
+:root[data-term-open][data-dock='bottom'] .ac-panel .ac-progress {
+  padding: 0.7rem 1.15rem 0.55rem;
+}
+
+:root[data-term-open][data-dock='bottom'] .ac-panel-head {
+  padding: 0.7rem 1.15rem 0.35rem;
+}
+
+:root[data-term-open][data-dock='bottom'] .ac-panel-note {
+  display: none;
+}
+
+:root[data-term-open][data-dock='bottom'] .ac-panel-foot {
+  justify-content: flex-end;
+  padding: 0.5rem 1.15rem 0.55rem;
+}
+
+/* And the ceiling comes up: the panel was leaving a 36px gap at the top of the
+   viewport it could have been using. */
+:root[data-term-open][data-dock='bottom'] .ac-panel {
+  max-height: min(32rem, calc(100dvh - 5.25rem - var(--dock-h)));
 }

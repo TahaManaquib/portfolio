@@ -904,7 +904,22 @@ export function grade(scenario: Scenario, draft: Draft): Result {
   });
 
   const needed = neededFor(scenario);
-  const extra = draft.actions.filter((a) => !needed.has(a));
+
+  // **An extra is what the visitor granted, measured against what they were
+  // handed** — not against nothing.
+  //
+  // That distinction only bites in `fix` mode, which starts from the policy as
+  // shipped: the role already holds permissions no requirement mentions, and
+  // billing those to the visitor fails them for something they never did. Worse,
+  // the ones the brief is *about* are already named by a failing must-not, so
+  // counting them again reports the same problem twice in two different
+  // vocabularies. A permission the visitor adds on top is still over-granting
+  // and still counts — minimality means something in a fix too.
+  //
+  // `build` starts from nothing, so the baseline is empty and this is the same
+  // filter it always was.
+  const baseline = new Set(initialDraft(scenario).actions);
+  const extra = draft.actions.filter((a) => !needed.has(a) && !baseline.has(a));
 
   // `stated` notes extras without failing on them; the harder levels do not.
   const tolerant = scenario.level === 'stated';

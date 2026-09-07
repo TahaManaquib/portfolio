@@ -461,7 +461,7 @@ Non-negotiables:
 > Phase 3.5 is complete: palette presets (3.5a) and editing (3.5b) are built, and visitor
 > comments (3.5c) were cut. The custom colour picker and the JSON font-size control were built and
 > then removed. Nothing here is outstanding — the next thing is the API Simulation checkpoint
-> below, before Phase 4.
+> below.
 
 ---
 
@@ -478,8 +478,9 @@ thing:
 | **Terminal**           | a tool, and a place with secrets  | history and access |
 | **Customization**      | the portfolio becomes yours       | your vibe          |
 
-Those three residues are what Phase 4 remembers a returning visitor by, and what the Phase 5
-achievement list gets derived from. Do not design achievements here.
+Those three residues are what the Phase 5 achievement list is derived from. (Phase 4 was going
+to remember them for a returning visitor; it was removed — the list is the return mechanic.) Do not
+design achievements here.
 
 **Build order is fixed, and each pillar is planned separately before any of it is written.** They
 are independent — do not start two at once, and do not scaffold ahead.
@@ -652,7 +653,7 @@ Notes worth keeping:
   - **Nothing persists, decided late.** The policy did save for a while, on the grounds that it
     was the residue Phase 4 would remember. Taha cut it: a draft is an attempt at a puzzle, not a
     preference, and a half-finished answer restored on the next visit is worse than a blank page.
-    Phase 4 will need a different residue from this pillar — most likely which briefs were
+    Phase 5 will need a different residue from this pillar — most likely which briefs were
     solved, which is a different thing from the draft and belongs to that phase.
   - Findings state themselves calmly — one accent, no red the palette does not have. Verified
     7.77:1 worst case across the presets. Section rests at 710px, 810px with every toggle on and
@@ -780,7 +781,7 @@ Notes worth keeping:
   for the wrong reason — data should not depend on an island — so `secret.ts` is now
   dependency-free and the signing happens where it is used.
 - **The unlock persists**, deliberately unlike the sandbox's drafts: a draft is an unfinished
-  attempt, this is earned progress. It is the Phase 4 "access" residue and the Phase 5 achievement
+  attempt, this is earned progress. It is the "access" residue and the Phase 5 achievement
   flag, recorded with no UI as CLAUDE.md requires. Six malformed stored values were fed to it —
   bad JSON, an object, an array of numbers, `null`, a mixed array, an empty array — and all six
   degrade to "unauthenticated" rather than throwing.
@@ -873,7 +874,7 @@ must contain no `data-dock-mode`, and `dock.ts` must export no mode API.
 moves or resizes the panel finds it where they left it.
 
 A stale `taha:terminal-mode` in a returning visitor's storage is inert — nothing reads it — and is
-left to be swept up with `taha:api-progress` in Phase 4, where the localStorage work lives anyway.
+left to be swept up with `taha:api-progress` in Phase 5, where the localStorage work now lives.
 Verified: a browser holding `taha:terminal-mode: "overlay"` still gets push.
 
 Two harness lessons from testing this one, both cost real time:
@@ -1136,6 +1137,413 @@ terminal, azure as an editorial spread — the same site with a different charac
 - **Cost:** the whole palette-and-vibe system is 2,460 bytes raw. No new fonts — a third typeface
   would be 20–30KB against a hard performance constraint, and mono-vs-sans plus scale and tracking
   already carries more character than a third family would.
+
+## Phase 4 — Return Experience (REMOVED)
+
+**Cut at Taha's request**, and the reasoning is worth keeping because it also explains what
+replaced it.
+
+The phase had four items. Three were already hollow by the time it came up: the **repo link** was
+built in Phase 1 and sits in the footer; the **anonymous visitor ID** had no consumer, since with
+no backend and no analytics nothing reads it and "have I been here before" is answered by a
+timestamp; and the **flag persistence** was never really return-experience work — it is the
+substrate achievements are built on.
+
+That left the **returning-visitor message and rotating hint** as the only real content, and Taha's
+argument against it is the stronger one: achievements persist, so a visitor who found three things
+already has a concrete reason to come back, and a list showing `???` for what is unfound says
+exactly what is left. "Welcome back" says nothing by comparison. CLAUDE.md's framing for this was
+_"curiosity, not addiction"_ — a list of unfound things is precisely that.
+
+**A second benefit, which is not incidental.** The returning-visitor line was the only planned
+feature that would have put _content_ JavaScript on the recruiter path. Everything on the initial
+page today is loaders for on-demand features — 1,273 bytes that fetch things when asked and
+otherwise do nothing. A message on the page means the initial load executes code that mutates the
+DOM. Cutting it keeps "the recruiter path ships no JS until the visitor asks for it" literally
+true, which is a claim the README has to be able to make.
+
+**What survives, and where it went:** the unlock-worthy flags are now **Phase 5 step 2**, where
+they belong. Removing this phase must not be read as "persist nothing" — the persistence is the
+load-bearing half and getting it right is what makes the achievement list cheap to build.
+
+Also folded into Phase 5: sweeping the two keys orphaned in returning visitors' browsers,
+`taha:api-progress` (from the removed API Simulation) and `taha:terminal-mode` (from the
+push/overlay comparison). Both are inert; neither is read by anything.
+
+**Not to be rebuilt without an explicit instruction:** the returning-visitor message, the rotating
+discovery hint, the anonymous visitor ID, and `whoami`.
+
+### 3.6i — Terminal: text size — DONE
+
+A small UI change asked for before Phase 5's plumbing: `A−` / `A+` in the title bar, plus
+Ctrl/Cmd `+` / `-` while the panel has focus. **10–15px from a default of 13**, persisted
+alongside the dock and the per-axis sizes.
+
+- **One token, one line.** `.term` already set the base size and `.term-input` already said
+  `font: inherit`, so putting the size in the panel's inline style scales the scrollback and the
+  input together. The title bar states 11px explicitly and is therefore untouched — chrome must
+  not scale with the thing it is scaling.
+- **The bounds ended up Taha's**, narrowed from the 11–20 first proposed: a terminal is somewhere
+  you want more lines on screen rather than comfortable prose, so the floor sits below the machine
+  view's 11px.
+- **One assertion earned its place immediately.** `FONT_MAX` was briefly equal to `FONT_DEFAULT`,
+  which disabled `A+` from the moment the panel opened — the control could only shrink. The test
+  now asserts `FONT_MIN < FONT_DEFAULT < FONT_MAX` rather than any particular numbers, so the
+  bounds can move freely but cannot become unusable.
+- **The shortcut takes Ctrl/Cmd `+`/`-` from browser zoom**, which is only acceptable because the
+  handler sits on the panel and so fires only while focus is inside it. Verified both ways: all
+  four key faces (`+ = - _`) work inside, a plain `+` still types, and `Ctrl+=` on the hero is
+  **not** swallowed — zoom comes straight back when you click away.
+- **A test found a real weakness.** `Math.min(Math.max(NaN, lo), hi)` is NaN, so `clampFont` could
+  return NaN and reach the DOM as `font-size: NaNpx` — invisible until someone wondered why the
+  buttons had stopped working. Unreachable today because `loadFont` guards first, but it is a
+  public function, so it now falls back to the default on non-finite input.
+- Buttons disable at each bound rather than silently ignoring a press.
+
+---
+
+## Phase 5 — Achievements (designed last, from the finished site)
+
+**Goal:** now that the site actually exists, work out what's worth rewarding and build it. This
+phase is deliberately last-but-one: the list is derived from the real moments the finished site
+offers, not invented up front. Nothing built so far has shipped achievement UI, which is what makes this possible.
+
+Precondition: the site is finished. **Phase 4 was removed**, so the flags it would have persisted
+are this phase's job — step 2 below. What already exists to build on: `taha:unlocked` (the `sudo`
+scope earned through the terminal's auth chain) and the terminal's own UI preferences. Everything
+else needs wiring here.
+
+Build, one step at a time with approval between each:
+
+1. **Audit + propose the list — DONE.** The audit found ~40 reachable moments; Taha approved
+   **twelve**, listed below. Anything not on it was cut, and the cuts are as deliberate as the
+   keeps.
+
+   | #   | achievement                | what it takes                                                     |
+   | --- | -------------------------- | ----------------------------------------------------------------- |
+   | 1   | Open a channel             | open the terminal                                                 |
+   | 2   | Rewrite the page           | edit a value in the JSON                                          |
+   | 3   | Use it, don't just read it | run `jwt` / `hash` / `base64` / `uuid`                            |
+   | 4   | Give them what they need   | satisfy a brief                                                   |
+   | 5   | Grow the payload           | add an object to an array                                         |
+   | 6   | Daylight                   | find one of the six light identities                              |
+   | 7   | Find the leak              | run `sudo hire taha` while still locked                           |
+   | 8   | Clean slate                | empty the whole payload — every value cleared, every array empty  |
+   | 9   | Clear the board            | solve all nine briefs                                             |
+   | 10  | Get authorised             | `auth <token>` verifies                                           |
+   | 11  | Same state, two doors      | change it with the terminal, undo it with the source view's reset |
+   | 12  | Mint your own              | forge a valid token and pass it to `auth`                         |
+
+   **The wording is present tense**, changed at Taha's request after the list shipped: the panel
+   is read far more often as a checklist of what is left than as a trophy case, and past tense
+   told an unearned row that it had already happened. The table above tracks the shipped
+   wording rather than the wording as first approved — it is what CLAUDE.md points at for
+   "the list". Four entries are noun phrases with no tense to change.
+
+   Ordered easy → hard. **Mint your own** is last deliberately: it is the only one that requires
+   understanding _why_ the auth chain is theatre, since earning it means noticing that the signing
+   key ships in the bundle and using it yourself.
+
+   Notes that matter for the build:
+
+   - **Every trigger lives inside one of the three on-demand islands** — terminal, source view,
+     sandbox. That is a hard constraint, not a coincidence: an achievement triggered on the
+     homepage itself would need JavaScript on the recruiter path, which is exactly what removing
+     Phase 4 protected. It is why "found the 404", "clicked View source" and "downloaded the
+     résumé" are **not** on the list, and must not be added.
+   - **Subsumed entries were cut rather than kept.** "Opened the machine view" is implied by
+     _Rewrite the page_; "decoded the token" is implied by _Get authorised_. Both were dropped.
+   - **Clean slate is the tedious one**, by design — 46 values plus emptying six arrays.
+     `set <path> ""` works from the terminal, so the fast route is to clear values through the
+     control surface and use the `−` control for structure, which quietly rewards the same insight
+     as _Same state, two doors_.
+   - **Clear the board needs a set of solved brief ids**, not a counter — a collection of
+     write-once flags, which keeps it inside the no-streaks rule.
+   - Rejected during the audit, with reasons, so they do not come back: all-six-shapes (rewards
+     clicking through a list rather than noticing anything), docking (a preference, not a
+     discovery), least-privilege and judgement-specific solves (cut as repeating the same
+     criteria), and the 404 (would need JS on a page that ships none).
+
+2. **Unlock plumbing — DONE.** Two modules and twelve writes.
+   - **`src/data/achievements.ts`** — the twelve as pure data, no imports, so Node reads it
+     directly. Each entry names the island that awards it, which is documentation _and_ an
+     assertion.
+   - **`src/islands/achievements/flags.ts`** — a deliberately dumb store. It records ids and does
+     not know what any of them mean; every derivation belongs to the island that owns the
+     question, because that is the only place the denominator is known. A store hardcoding
+     `=== 9` would be wrong the day a tenth brief is written, so `Clear the board` is derived in
+     `Access.tsx` from `SCENARIOS.length`.
+   - **Write-once flags, no counters, no dates.** Not even a first-seen timestamp — nothing needs
+     one now that the list is the return mechanic. Asserted by grepping the store for date
+     arithmetic and increments, so a streak mechanic cannot creep in later.
+   - **Solved briefs are a set of ids**, never a count: solving the same brief twice must not move
+     you closer to having solved them all.
+   - **Untrusted reads**, like everything else stored here — bad JSON, an object, a number array,
+     `null` and a mixed array all read as "found nothing", verified.
+   - **The orphan sweep runs from whichever island loads first.** A visitor who never opens one
+     keeps their two dead keys, and that is the right trade: sweeping on the homepage would put
+     JavaScript on the recruiter path to delete two strings nothing reads.
+
+   **The test that matters most** cross-references the list against the source: every id must be
+   awarded somewhere, and nothing may be awarded that is not on the list. An achievement defined
+   but never wired is a permanent `???`; an award for an unknown id is dead code. Neither can now
+   survive a run.
+
+   **Two bugs found while wiring, both by testing rather than reading:**
+   - `used-a-tool` required an argument, so a bare `uuid` — which is a completely valid use, it
+     generates one — did not count, while a bare `jwt` printing a usage error would have if the
+     guard had been the other way round. `uuid` is now separated from the three tools that need
+     input.
+   - `found-leak` was written into the _success_ branch of `sudo hire taha` under the wrong id.
+     It belongs in the **locked** branch: `help` does not name that command, so running it while
+     still locked is what proves you read the payload. Reaching the success ending means the
+     unlock chain told you, which is a different discovery.
+
+   **Cost:** always-present JS 1,274 → 1,382 bytes gzipped. None of it is achievement logic —
+   `flags.ts` became a shared chunk, so each loader now carries a `__vite__mapDeps` array naming
+   it. That is preload metadata, and it buys a parallel fetch when an island opens rather than a
+   serial one. Verified no initial script contains any flag code.
+
+   All twelve were earned by hand in the browser, including signing a token with the key scraped
+   out of the built bundle — which is the intended route for **Mint your own** and confirms the
+   key really is findable. `Clean slate` turned out easier than estimated: emptying the arrays
+   removes most of the values with them, so it is ~29 actions rather than 50+.
+
+3. **`/achievements` page — DONE, then redesigned.** The first version was a numbered list of
+   `???` with the earned ones filled in by script. Taha's verdict was that it was not intuitive,
+   and two of his instructions removed the reason it was built that way:
+   - **Every row shows its title and what it takes, earned or not** — greyed until found, at his
+     request. That kills the "labels are not in the HTML" rule outright: there is nothing left to
+     withhold, so the labels are now plain markup and **the page is complete with JavaScript off**
+     rather than being thirteen blanks waiting for a chunk. The script only marks which rows are
+     done. The list reads as a checklist of what is left, which is what makes it the return
+     mechanic that replaced Phase 4.
+   - **Ordered by difficulty, with no difficulty labels** — easiest first, hardest last, the
+     grouping carried by comments in `achievements.ts` and by nothing the visitor sees. Naming
+     tiers would turn a list of things to find into a scoreboard.
+   - **The redesign itself.** The framing block borrowed from the source view and the 404 is gone:
+     it dressed a real page as a fake HTTP response for no reason, and it was the first thing on
+     the page. In its place, a **row of thirteen pips plus a count** — progress answerable at a
+     glance, before any reading, which a line of small caps above a list never was. Rows became
+     **two lines**: a 15px sans title over an 11px mono description. Thirteen single-line mono
+     rows read as one undifferentiated block with nothing marking where an entry began.
+   - **State shows in three ways at once**, never hue alone (WCAG 1.4.1): the glyph changes
+     (`check` vs `circle-dashed`), the title comes forward from muted to full, and the pip fills.
+   - This route runs a script, which is fine: it is not the recruiter path. That distinction is
+     the whole reason the flag design works.
+
+4. **Entry icon — DONE, then redesigned.** A door in the **bottom-left**, opposite corner to the
+   terminal and source-view controls so it does not read as a third button in a row.
+   - **It is a bordered box containing a Lucide `shapes` mark**, at Taha's request — the first
+     version was a bare glyph, and the two controls in the opposite corner are boxes. Matching
+     them makes it read as a control rather than as a smudge, without making it loud.
+   - **Deliberately hard to spot**, also at his request: `opacity: 0.22` at rest, full on hover or
+     focus. Raised from `0.09`, which the box treatment made unnecessary — a shape at 0.22 is
+     still easy to miss and no longer invisible. Not `0`: an icon nobody can find is a feature
+     that does not exist. No idle animation (CLAUDE.md).
+   - **A plain `<a>` and nothing else.** It does not read stored flags to show its state, because
+     that would put content JavaScript on the recruiter path — the one thing removing Phase 4
+     protected. Verified: adding the door changed the initial JS by **zero bytes**.
+   - 44×44 hit area so sweeping the corner finds it and WCAG 2.5.8 is met even though the mark
+     inside is small; keyboard-focusable with a real accessible name, so a screen-reader visitor
+     finds it by tabbing rather than being excluded from the game.
+
+   **A thirteenth achievement came with it**, at Taha's request: **Find the door**, earned by
+   arriving.
+
+5. **Unlock feedback — DONE, then redesigned.** A card in the bottom-left saying what was just
+   found, stacked above the door.
+   - **Not the icon's state**, which CLAUDE.md offers as the alternative: rendering it would mean
+     reading stored flags on the homepage, and that is content JavaScript on the recruiter path.
+   - **The two rules in CLAUDE.md conflict on their face** — "a brief one-time notice" is
+     permitted one line above "no achievement mention anywhere on the homepage". Resolved by
+     reading the second as forbidding _persistent_ chrome: no counter, no badge, nothing left
+     behind, and never seen by anyone who does not open an island. Recorded there.
+   - **It became a card because a line was missable.** The first version was one thin mono line;
+     Taha asked that an unlock be plainly visible. It is now the `shapes` mark, an `Unlocked`
+     kicker, the title in sans and the moment in mono, with a 3px accent left border and a
+     shadow — held for **5s** rather than 3.2s, since there are three lines to read now.
+     Still nothing that loops, and still nothing left behind.
+   - **`award()` replaced `earn()` in the islands**, so recording and announcing cannot come
+     apart. There is no way to add an achievement that earns silently. The page still uses
+     `earn()` — announcing "Find the door" to someone reading the list is telling them what is
+     in front of them.
+   - **The notice does not link to the page.** It sits above the door so it gestures at where the
+     door is without handing it over, and it carries the same mark, so the notice and the place it
+     points at are visibly the same thing.
+   - **A real bug, caught by measuring rather than reading.** The entrance was a transition
+     triggered by a `data-shown` attribute set inside `requestAnimationFrame` — and rAF is paused
+     in a backgrounded tab, so the notice would have stayed at `opacity: 0` for its whole life and
+     then been removed unseen. It is a CSS animation on insert now, with no JavaScript trigger at
+     all. Verified the resting opacity is 1 with the animation removed, since a frozen animation
+     cannot be observed in a hidden tab.
+   - `role="status"` and `aria-live="polite"`, so it never interrupts a screen reader mid-sentence,
+     and `pointer-events: none` so it can never eat a click.
+
+6. **An icon library, added for the above — `lucide-static`.** The page, the door and the notice
+   all wanted real marks rather than punctuation, so one dependency arrived to serve all three.
+   - **`lucide-static`, not `lucide-react`.** Taha suggested the React package; it would have
+     pulled React into a Preact project for the sake of drawing three shapes. `lucide-preact`
+     would at least reuse the runtime, but both ship a component and therefore client JavaScript.
+     `lucide-static` is a directory of plain SVG files.
+   - **`src/components/Icon.astro` inlines one at build time** with `readFileSync`, so an icon
+     costs **zero client JavaScript** — the only terms on which one belongs on the recruiter path.
+     A missing name throws at build rather than rendering nothing.
+   - **Two traps, both hit.** The file was resolved from `import.meta.url`, which during a build
+     points into `dist/.prerender/chunks/` — every icon "did not exist". Resolved from
+     `process.cwd()` instead. And Astro's scoped CSS cannot reach markup injected through
+     `set:html` by another component, so `.ac-icon-done { display: none }` matched nothing and
+     **both** row icons rendered on every row; `:global()` is required, the same trap as
+     runtime-created elements already recorded in CLAUDE.md.
+
+**Also changed while here:** every in-page anchor became a rooted fragment (`/#stack`). The nav
+renders on `/achievements` and the 404 too, where a bare `#stack` pointed at nothing and the link
+silently did nothing.
+
+**And a real bug in the policy engine, surfaced by two tests contradicting each other.** One
+asserted a `fix` scenario is never graded on extras (the rule written on `Scenario.mode`); another
+asserted that adding something while fixing _is_ an extra. `grade()` implemented neither — it
+measured every draft against zero, so `leak` began with its three key permissions counted as the
+visitor's own over-granting while a failing must-not already named all three. The same problem,
+reported twice in two vocabularies, one of them blaming the visitor for the starting policy.
+
+The rule that reconciles them: **an extra is what the visitor granted, measured against what they
+were handed** — `initialDraft(scenario)` is the baseline, not the empty set. A permission already
+in the shipped policy is not theirs; one they tick on top still is. `build` starts from nothing, so
+its behaviour is unchanged. Verified in the browser as well as in Node: the finished `leak` fix now
+reads _"solved — exactly the permissions needed"_, and ticking `project:transfer` on top of it
+still fails.
+
+Locked rules that still apply: flat list, no categories, no homepage mention. (`???` for
+locked is **withdrawn** — see item 3.)
+See CLAUDE.md's Achievements section — it is the authority.
+
+**Prompt:**
+
+> Plan Phase 5 from PHASES.md: achievements. Read CLAUDE.md's Achievements section first — the
+> old draft chain (Hello World / Explorer / etc.) is withdrawn, do not resurrect it. Start with
+> the audit only: walk the finished site, inventory the real moments a visitor can actually
+> reach, and propose a flat list ordered easy → hard for my approval. Do not write any
+> achievement code until I've approved the list. Then build the plumbing, the /achievements page,
+> the entry icon, and unlock feedback as separate approval steps. Keep it code-split and
+> localStorage-only — there is no backend.
+
+---
+
+## Phase 6 — Polish + README
+
+**Goal:** only after everything above works end to end.
+
+### Done ahead of the phase: the tests moved into the repo
+
+They were written outside it, in a temp directory, and were one sweep away from being gone —
+nine suites and ~400 assertions encoding decisions that would otherwise regress silently. The
+`fix`-mode baseline rule found at the end of Phase 5 is the example: two suites disagreed, and
+that disagreement was the only thing that surfaced a real bug in `grade()`.
+
+- **`tests/` plus `npm test`**, a 40-line `harness.mjs` and a runner giving each suite its own
+  process — `achievements.test.mjs` installs a fake `localStorage` on `globalThis`, and suites
+  sharing a process would share that.
+- **No framework**, per CLAUDE.md's rule that none is added until something demands one. Nothing
+  here does: every assertion is one boolean and one label.
+- **The absolute paths were the actual blocker.** Every suite named `D:/My Data/...`, which is
+  precisely why they could not be committed. All resolution goes through `harness.mjs`'s `ROOT`
+  now, `readFileSync` included.
+- **Verified assertion-for-assertion**: each migrated suite prints exactly the count its original
+  did (34/54/14/46/25/51/18/122/38), so the mechanical rewrite dropped nothing. Two Node builtins
+  (`node:fs`, `node:crypto`) were caught by a blanket `import(` → `load(` rewrite and put back.
+- **The API Simulation's five suites were not moved** — their engine is deleted, so they are dead
+  code, and dead code is clutter in a repo that _is_ the portfolio.
+- Three unused destructured imports came out with them; `npm run check` is now 0 errors,
+  0 warnings, 0 hints across 47 files.
+
+The README must describe this honestly: plain Node scripts, no framework, and they cover the
+engines rather than the UI.
+
+### Also done ahead of the phase: the achievements panel replaced the route
+
+Taha's proposal, and the right one: the site is an SPA, and a whole route for a thirteen-row list
+was the one thing that was not. `/achievements` is gone; the door is a toggle for a panel in the
+same corner.
+
+- **It fixed a real defect.** `/achievements` and the 404 both shipped the entire `GET /taha`
+  payload and a working source-view toggle — pressing `{ }` on the achievements page swapped it
+  for JSON about Taha. The source view is the machine rendering of _this page's_ content and only
+  the homepage has one, so it now renders there and nowhere else. The 404's HTML fell from ~7.3 KB
+  to 3.8 KB gzipped and its JS from ~1.3 KB to 816 B.
+- **What it cost, stated honestly.** The route rendered all thirteen rows as HTML and read
+  correctly with JavaScript off. A runtime panel cannot. Accepted knowingly: the list is entirely
+  per-visitor state living in localStorage, so JavaScript-off gave you a catalogue and no progress.
+  The recruiter path went from **1,267 to 1,587 B gzipped** for the loader; the panel itself is a
+  1,365 B chunk fetched on the first click, and **no achievement label appears in any prerendered
+  HTML** — which the route could not say.
+- **Both other buttons stay visible while it is open**, at Taha's instruction. Hiding them was in
+  the original proposal and he was right to keep them: watching a row tick over while you work in
+  the terminal is the best moment the feature has, and hiding is the modality the terminal's spec
+  rejects. The source view is the one exception — it swaps the whole page, so opening it closes
+  the panel, via a listener that lives in the panel's own chunk rather than in the loader.
+- **A latent bug surfaced.** Only the _right_ dock offset the fixed corner controls. A left-docked
+  terminal slid underneath the door, the unlock notices and the panel; a bottom dock covered that
+  corner outright. Both mirrored rules added, and the panel's height budget subtracts the dock too.
+- **Plain DOM, not Preact** — thirteen static rows whose only state is one boolean each, decided at
+  open. A renderer would be a dependency in that chunk earning nothing.
+- Non-modal like the terminal: `Esc` closes, focus returns to the door, nothing is trapped.
+- Measured in a sized iframe at 360 and 390, since the harness would not shrink the window: fits,
+  clears the door, scrolls internally, no horizontal overflow.
+
+**Tests followed the move.** The suite's page assertions are now panel assertions, and the two
+properties above — dynamic import, and a loader that never touches flags — are asserted rather
+than assumed.
+
+### Also done ahead of the phase: spacing, scrollbars, reset, and a fourteenth
+
+Four things, all Taha's:
+
+1. **The panel got room to breathe.** Wider (23 → 25rem), rows at 0.8rem block padding with the
+   title and description further apart, and 1.15rem insets throughout. The list's right inset is
+   smaller than its left so the scrollbar sits in the gap rather than over the text.
+2. **Custom scrollbars, site-wide.** See CLAUDE.md's Scrollbars section for the rules. Two real
+   findings: `scrollbar-width` does not inherit (so it goes on `*`, not `:root`, or every inner
+   container keeps the 15px platform bar _with arrows_), and the thumb at `--color-fg-subtle`
+   failed WCAG 1.4.11's 3:1 on **all six light identities** at 2.77-2.79:1. Swept the mix: 50%
+   lands on exactly 3.00, 54% gives 3.35 worst case. Asserted per theme, both grounds.
+3. **A reset control**, quietest thing in the panel, two-step, clearing `taha:earned` **and
+   nothing else**. It cleared the solved briefs too at first; Taha's instruction was achievements
+   only, and the distinction is right — the briefs are the sandbox's progress, not an achievement
+   record. See CLAUDE.md for the consequence that follows.
+4. **A fourteenth achievement** — `all-found`, the capstone, earned when the other thirteen are.
+   Excluded from its own requirement, or the set never closes. Awarded from `sealIfComplete()` at
+   the single point every island records through.
+
+**One regression I introduced and then fixed.** Offsetting the panel above a bottom-docked
+terminal left it ~240px on a laptop, of which the fixed chrome took 160 — one visible row above a
+footer, which reads as broken rather than as tight. Under a bottom dock the intro and the footer
+note now give way and the paddings come in: two full rows plus partials, with the reset still
+reachable. It is genuinely cramped at a half-height terminal on a 695px viewport, and dragging the
+terminal down gives it back immediately.
+
+### Also done ahead of the phase: the terminal button became a toggle
+
+Taha's note: the source-view and achievements controls both highlight while open and close on a
+second click, and the terminal should match.
+
+- **Click now toggles** rather than always opening, and the button is **lit while the panel is
+  open**, keyed on `:root[data-term-open]` so it is correct however the panel was opened — the
+  button, ⌘K, or a command. `aria-expanded` is published from `markOpen()`, the one place that
+  knows, so `Esc`, the panel's own close control and `open <section>` all keep it honest.
+- **It uncovered a worse bug than the one it fixed.** Only the _right_ dock offset the fixed
+  corner controls, so a bottom-docked terminal — the default — drew itself straight over its own
+  open button and the source-view toggle. The terminal could be opened by clicking and then only
+  closed with `Esc`, because the button it came from was underneath the panel. Making the button a
+  toggle would have been pointless without this. All four controls now offset for a bottom dock,
+  with a test per control per dock (eleven assertions).
+- **A measurement lesson worth keeping.** `getComputedStyle` through the browser harness reported
+  the muted colour whether the panel was open or closed — even with the accent forced inline,
+  which is impossible. I moved the rule between files chasing a cascade problem that did not
+  exist; the screenshot showed the highlight working the whole time. The rule stayed in
+  `global.css` because that is where the other rules targeting this button live, but the comment
+  claiming it "silently did nothing" was written on a bad measurement and has been corrected.
+  **On this project, the screenshot is the ground truth for anything visual.**
 
 ### Required
 

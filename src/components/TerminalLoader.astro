@@ -15,8 +15,10 @@
   type="button"
   class="terminal-open"
   data-terminal-open
-  title="Open terminal (⌘K)"
+  title="Toggle terminal (⌘K)"
   aria-keyshortcuts="Meta+K Control+K"
+  aria-expanded="false"
+  aria-controls="terminal-panel"
 >
   <span class="glyph" aria-hidden="true">&gt;_</span>
   <span class="sr-only">Open terminal</span>
@@ -34,8 +36,12 @@
     return pending;
   }
 
-  function open() {
-    void load().then((t) => t.open());
+  // A toggle, like the source-view and achievements controls beside it. It used
+  // to only ever open, which meant the one visible way in had no way out —
+  // ⌘K toggled, the button did not, and the same button could be pressed twice
+  // with nothing happening the second time.
+  function toggle() {
+    void load().then((t) => (t.isOpen() ? t.close() : t.open()));
   }
 
   document.addEventListener('keydown', (event) => {
@@ -45,7 +51,7 @@
     void load().then((t) => (t.isOpen() ? t.close() : t.open()));
   });
 
-  openers.forEach((el) => el.addEventListener('click', open));
+  openers.forEach((el) => el.addEventListener('click', toggle));
 </script>
 
 <style>

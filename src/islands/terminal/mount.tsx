@@ -13,6 +13,8 @@
  */
 import { render } from 'preact';
 import Terminal from './Terminal';
+import { sweepRetiredKeys } from '../achievements/flags';
+import { award } from '../achievements/award';
 
 let host: HTMLElement | null = null;
 /** Where focus was before opening, so Esc can put it back. */
@@ -42,6 +44,17 @@ function focusInput(): void {
 function markOpen(open: boolean): void {
   if (open) document.documentElement.dataset.termOpen = '';
   else delete document.documentElement.dataset.termOpen;
+
+  // The opener's state is published here rather than in the loader, because the
+  // panel can be opened and closed by things the loader never sees: ⌘K, `Esc`,
+  // the panel's own close button, and `open <section>`, which closes it so the
+  // page it just scrolled is not hidden behind it. Setting the attribute at the
+  // one place that knows the truth is what keeps the button honest in all of
+  // them. The highlight itself is CSS on `[data-term-open]` and needs none of
+  // this — the attribute is for assistive tech.
+  for (const el of document.querySelectorAll('[data-terminal-open]')) {
+    el.setAttribute('aria-expanded', String(open));
+  }
 }
 
 function open(): void {
@@ -53,6 +66,12 @@ function open(): void {
   ensureMounted().removeAttribute('hidden');
   markOpen(true);
   focusInput();
+
+  // The first step into the discovery layer, and the cheapest achievement on
+  // the list on purpose — a list whose easiest entry is hard has no on-ramp.
+  award('terminal-opened');
+  // Whichever island loads first tidies up after the removed features.
+  sweepRetiredKeys();
 }
 
 function close(): void {

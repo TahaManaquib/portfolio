@@ -10,7 +10,7 @@
  * `tools.ts`, which has no DOM in it and is tested in Node.
  */
 import { site } from '../../data/site';
-import { PUBLIC_SIGNING_KEY, SUDO_SCOPE } from '../../data/secret';
+import { PUBLIC_SIGNING_KEY, SUDO_SCOPE, TOKEN_PAYLOAD } from '../../data/secret';
 import {
   HASHES,
   MAX_UUIDS,
@@ -23,6 +23,7 @@ import {
   verifyHs256,
 } from './tools';
 import { grant, has, scopes } from './unlock';
+import { award } from '../achievements/award';
 import { DEFAULT_DOCK, DOCKS, SIDE_MIN_VIEWPORT, isSide, type Dock } from './dock';
 
 export type Line = { kind: 'in' | 'out' | 'err' | 'dim'; text: string };
@@ -30,6 +31,17 @@ export type Line = { kind: 'in' | 'out' | 'err' | 'dim'; text: string };
 const out = (text: string): Line => ({ kind: 'out', text });
 const dim = (text: string): Line => ({ kind: 'dim', text });
 const err = (text: string): Line => ({ kind: 'err', text });
+
+/**
+ * The commands that do something rather than print something.
+ *
+ * `uuid` is separated out because it is the one that works with no argument —
+ * `uuid` on its own generates one, which is a real use. The other three only
+ * print a usage error without one, and printing a usage error is not using a
+ * tool.
+ */
+const TOOLS_NEEDING_INPUT: readonly string[] = ['jwt', 'hash', 'base64'];
+const TOOLS: readonly string[] = [...TOOLS_NEEDING_INPUT, 'uuid'];
 
 /** A command's output, or `cls` to signal a screen wipe. */
 type Output = Line[] | 'cls';
@@ -244,6 +256,16 @@ async function auth(arg: string): Promise<Line[]> {
     return [err(`signature is valid, but the token grants no scope this terminal knows`)];
   }
 
+  award('authorised');
+
+  // A token that verifies but is not the one this site ships can only have been
+  // signed by the visitor, using the key out of the bundle. That is the deepest
+  // thing on the site: it means they worked out that a client-side key is not a
+  // secret, which is the entire lesson the chain exists to teach.
+  const shipped = JSON.stringify(TOKEN_PAYLOAD);
+  const presented = JSON.stringify(decodeJwt(arg).payload);
+  if (presented !== shipped) award('minted-own');
+
   if (!grant(scope)) {
     return [out(`already authorised — scope: ${scope}`), dim(THEATRE)];
   }
@@ -273,6 +295,12 @@ function sudo(): Line[] {
       out('exit 0'),
     ];
   }
+
+  // Running it *while locked* is the achievement: `help` does not name this
+  // command, so the only way to know it exists is to have read the payload,
+  // where `undocumented` leaks it. Reaching the success ending instead means
+  // you were told by the unlock chain, which is a different discovery.
+  award('found-leak');
 
   return [
     err('[sudo] password for visitor:'),
@@ -363,6 +391,10 @@ function theme(arg: string): Line[] {
   // carries it to :root with no JavaScript involved in the actual recolouring.
   radio.checked = true;
   radio.dispatchEvent(new Event('change', { bubbles: true }));
+
+  // Every light identity is unlisted, so reaching one means going looking.
+  if (radio.dataset.polarity === 'light') award('found-daylight');
+
   return [out(`palette: ${wanted}`)];
 }
 
@@ -600,5 +632,13 @@ export function runCommand(raw: string): Output | Promise<Output> {
     // A recognisable shell error beats a bespoke one — and `help` is the way out.
     return [err(`${verb}: command not found`), dim("type 'help' for commands")];
   }
+
+  // Recorded here rather than inside each tool, so adding a tool cannot forget
+  // it. Only the four that *do* something count — the content commands are
+  // another way to read the page, which is the opposite of the point.
+  if (TOOLS.includes(verb) && (arg !== '' || !TOOLS_NEEDING_INPUT.includes(verb))) {
+    award('used-a-tool');
+  }
+
   return command.run(arg);
 }

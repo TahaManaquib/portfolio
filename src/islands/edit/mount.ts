@@ -29,6 +29,9 @@
  *     before anything changes.
  */
 
+import { sweepRetiredKeys } from '../achievements/flags';
+import { award } from '../achievements/award';
+
 const PATH_ATTRS = ['data-path', 'data-bind', 'data-bind-item'] as const;
 
 /**
@@ -233,8 +236,36 @@ export function mountEditor(view: HTMLElement): void {
   /** A value the page renders somewhere — as text, or as an attribute. */
   const isBound = (path: string) => targets.has(path) || attrs.has(path);
 
+  /** True when the terminal has driven an edit through the handle below. */
+  let changedFromTerminal = false;
+
   function markTouched(): void {
     if (resetRow) resetRow.hidden = false;
+    award('edited-value');
+    checkCleanSlate();
+  }
+
+  /**
+   * Every value emptied and every array empty.
+   *
+   * Scanning ~50 nodes on each keystroke is cheap next to the layout the
+   * keystroke already caused, so this is not debounced — and it has to run on
+   * removals too, where there is no keystroke to debounce against.
+   *
+   * `isBound` is the filter that matters: the JSON tree contains nodes the page
+   * does not render, and requiring those to be empty would make the
+   * achievement unreachable.
+   */
+  function checkCleanSlate(): void {
+    const cells = [...view.querySelectorAll<HTMLElement>(LEAF)].filter((cell) =>
+      isBound(cell.dataset.path ?? ''),
+    );
+    if (cells.length === 0) return;
+    if (cells.some((cell) => (cell.textContent ?? '').trim() !== '')) return;
+    // Arrays must be empty, not merely blank — an empty-stringed entry is not
+    // a removed one, and the achievement is for emptying the payload.
+    if (lists.some((info) => info.details.isConnected && jsonRows(info).length > 0)) return;
+    award('clean-slate');
   }
 
   function write(path: string, text: string): void {
@@ -551,6 +582,11 @@ export function mountEditor(view: HTMLElement): void {
 
     // `:scope >` matters: an object entry's rows box contains nested arrays
     // with add rows of their own, and an unscoped query finds one of those.
+    // Only an array of objects counts. Adding a string is the same gesture as
+    // editing one; adding an object means finding the control that clones a
+    // whole shape, keys and order intact.
+    if (info.objects) award('grew-payload');
+
     const addRow = info.rows.querySelector(':scope > [data-add-row]');
     if (addRow) info.rows.insertBefore(row, addRow);
     else info.rows.append(row);
@@ -707,11 +743,20 @@ export function mountEditor(view: HTMLElement): void {
     if (resetRow) resetRow.hidden = true;
   }
 
-  resetButton?.addEventListener('click', resetAll);
+  resetButton?.addEventListener('click', () => {
+    // Only the button earns it, never `api.reset()`. The achievement is for
+    // noticing the two surfaces drive one state, which means using one to undo
+    // the other — doing both from the terminal proves nothing.
+    if (changedFromTerminal) award('two-doors');
+    resetAll();
+  });
+
+  sweepRetiredKeys();
 
   api = {
     set(path, value) {
       if (!isBound(path)) return false;
+      changedFromTerminal = true;
       const cell = view.querySelector<HTMLElement>(`${LEAF}[data-path="${CSS.escape(path)}"]`);
       // The JSON view and the page move together, exactly as they do when the
       // cell is typed into. `originals` was populated by makeEditable, so reset

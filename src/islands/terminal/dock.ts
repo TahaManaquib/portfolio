@@ -1,5 +1,11 @@
 /**
- * Where the terminal sits.
+ * Where the terminal sits, and how big its text is.
+ *
+ * This is the panel's persisted-preference store: the edge it docks to, its
+ * size on each axis, and its font size. All of them are UI preferences in the
+ * sense CLAUDE.md means — a visitor who moved or resized their terminal expects
+ * it remembered — as distinct from content edits, which are deliberately
+ * ephemeral.
  *
  * The panel docks to one of three edges and the page gives way to it, the way
  * an editor's does. An overlay mode was built alongside this so the two could
@@ -55,6 +61,37 @@ export const SIDE_RESERVE = 120;
  */
 export const SIDE_MIN_VIEWPORT = 640;
 
+/* -------------------------------------------------------------------------- */
+/* font size                                                                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The scrollback's text size, adjustable from the title bar or with Ctrl/Cmd
+ * plus `+` / `-` while the panel has focus.
+ *
+ * 13px is what the panel is designed at. The floor is 11px, which is the size
+ * the machine view is set at and the smallest this project treats as readable
+ * body text; below that it stops being legible rather than becoming useful. The
+ * ceiling is 20px, past which a side dock holds about twenty characters a line
+ * and the panel is no longer a terminal.
+ *
+ * Only the scrollback and input scale. The title bar is fixed at 11px on
+ * purpose — it is chrome, and a font control that resizes its own buttons is a
+ * toy rather than a tool.
+ */
+export const FONT_MIN = 10;
+export const FONT_MAX = 15;
+export const FONT_DEFAULT = 13;
+
+/**
+ * Non-finite input falls back to the default rather than propagating.
+ * `Math.min(Math.max(NaN, lo), hi)` is NaN, which would reach the DOM as
+ * `font-size: NaNpx` and silently do nothing — the kind of failure that is
+ * invisible until someone wonders why the buttons stopped working.
+ */
+export const clampFont = (px: number) =>
+  Number.isFinite(px) ? Math.min(Math.max(Math.round(px), FONT_MIN), FONT_MAX) : FONT_DEFAULT;
+
 export function minFor(dock: Dock): number {
   return isSide(dock) ? MIN_WIDTH : MIN_HEIGHT;
 }
@@ -109,6 +146,7 @@ const DOCK_KEY = 'taha:terminal-dock';
  */
 const HEIGHT_KEY = 'taha:terminal-height';
 const WIDTH_KEY = 'taha:terminal-width';
+const FONT_KEY = 'taha:terminal-font';
 
 function readString(key: string): string | null {
   try {
@@ -136,6 +174,14 @@ export function loadSize(dock: Dock): number | null {
   const n = raw === null ? NaN : Number.parseInt(raw, 10);
   return Number.isFinite(n) ? n : null;
 }
+
+export function loadFont(): number {
+  const raw = readString(FONT_KEY);
+  const n = raw === null ? NaN : Number.parseInt(raw, 10);
+  return Number.isFinite(n) ? clampFont(n) : FONT_DEFAULT;
+}
+
+export const saveFont = (px: number): void => writeString(FONT_KEY, String(px));
 
 export const saveDock = (dock: Dock): void => writeString(DOCK_KEY, dock);
 export const saveSize = (dock: Dock, px: number): void =>

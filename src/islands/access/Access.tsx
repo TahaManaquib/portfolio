@@ -9,6 +9,8 @@
  * framework is actually for.
  */
 import { useState } from 'preact/hooks';
+import { markSolved, solvedBriefs } from '../achievements/flags';
+import { award } from '../achievements/award';
 import {
   DEFAULT_LEVEL,
   LEVELS,
@@ -99,6 +101,25 @@ export default function Access({
         ? draft.actions.filter((a) => a !== action)
         : [...draft.actions, action],
     });
+  }
+
+  /**
+   * Grades, and records what the grade means.
+   *
+   * The denominator lives here rather than in the flag store: only this module
+   * knows how many briefs there are, so `SCENARIOS.length` is the right place
+   * to ask whether the board is clear. A store that hardcoded nine would be
+   * wrong the day a tenth brief is written.
+   */
+  function check(target: Scenario, policy: Draft): Result {
+    const outcome = grade(target, policy);
+    if (outcome.solved) {
+      award('solved-a-brief');
+      markSolved(target.id);
+      const solved = new Set(solvedBriefs());
+      if (SCENARIOS.every((s) => solved.has(s.id))) award('cleared-board');
+    }
+    return outcome;
   }
 
   const verdictFor = (label: string) => result?.verdicts.find((v) => v.label === label);
@@ -238,7 +259,7 @@ export default function Access({
 
       {/* Checked on demand, never as you type. */}
       <div class="ax-check">
-        <button type="button" class="ax-run" onClick={() => setResult(grade(scenario, draft))}>
+        <button type="button" class="ax-run" onClick={() => setResult(check(scenario, draft))}>
           check
         </button>
         {result && (

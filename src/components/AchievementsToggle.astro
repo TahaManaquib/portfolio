@@ -1,0 +1,57 @@
+---
+// The door — now a toggle rather than a link.
+//
+// It used to be a plain `<a href="/achievements">`, which cost the recruiter
+// path exactly zero bytes. It costs a loader now, which is the same trade the
+// terminal and the source view already make: the panel itself, the thirteen
+// labels and the flag reader are a separate chunk fetched on the first click.
+// Nothing about achievements is in the initial page but this button.
+//
+// The rule it still keeps — the important one — is that **it does not read
+// stored flags**. No script here asks what has been earned, so there is no
+// content JavaScript on the recruiter path and no reason for the initial page
+// to touch localStorage. That is the constraint removing Phase 4 protected, and
+// it survives the change intact.
+//
+// A bordered box matching the two controls in the opposite corner, so it reads
+// as part of the same set rather than a stray mark — but dimmer, because it is
+// still meant to be found rather than offered.
+//
+// `shapes` from Lucide: abstract on purpose. A trophy or a medal would announce
+// "game" on a page whose whole manner is restrained, and would promise points
+// rather than discoveries.
+//
+// It is *not* invisible: `opacity: 0` would make it undiscoverable rather than
+// unobtrusive, and it stays in the accessibility tree with a real name so a
+// keyboard visitor finds it by tabbing. No idle animation, ever (CLAUDE.md).
+import Icon from './Icon.astro';
+---
+
+<button
+  type="button"
+  class="door"
+  data-achievements-open
+  aria-label="Achievements"
+  aria-expanded="false"
+  aria-controls="achievements-panel"
+>
+  <Icon name="shapes" size={15} />
+</button>
+
+<script>
+  const button = document.querySelector<HTMLElement>('[data-achievements-open]');
+
+  if (button) {
+    // Cached so the chunk is fetched at most once, and so the handle keeps its
+    // own open/closed state across clicks.
+    let pending: Promise<{ open: () => void; close: () => void; isOpen: () => boolean }> | null =
+      null;
+
+    const load = () =>
+      (pending ??= import('../islands/achievements/panel').then((m) => m.achievements(button)));
+
+    button.addEventListener('click', () => {
+      void load().then((panel) => (panel.isOpen() ? panel.close() : panel.open()));
+    });
+  }
+</script>

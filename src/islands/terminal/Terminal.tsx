@@ -10,16 +10,21 @@ import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import { runCommand, type Line } from './commands';
 import {
   DOCKS,
+  FONT_MAX,
+  FONT_MIN,
   apply,
+  clampFont,
   clampSize,
   defaultFor,
   effectiveDock,
   isSide,
   loadDock,
+  loadFont,
   loadSize,
   maxFor,
   minFor,
   saveDock,
+  saveFont,
   saveSize,
   type Dock,
 } from './dock';
@@ -114,6 +119,7 @@ function banner(): Line[] {
 export default function Terminal({ onClose }: { onClose: () => void }) {
   const [dock, setDock] = useState<Dock>(() => effectiveDock(loadDock(), window.innerWidth));
   const [size, setSize] = useState(() => startSize(effectiveDock(loadDock(), window.innerWidth)));
+  const [font, setFont] = useState(loadFont);
   const [lines, setLines] = useState<Line[]>(() => loadLines() ?? banner());
   const [value, setValue] = useState('');
   const [dragging, setDragging] = useState(false);
@@ -195,6 +201,14 @@ export default function Terminal({ onClose }: { onClose: () => void }) {
     },
     [dock],
   );
+
+  const stepFont = useCallback((by: number) => {
+    setFont((current) => {
+      const next = clampFont(current + by);
+      if (next !== current) saveFont(next);
+      return next;
+    });
+  }, []);
 
   /** Moving the panel swaps to that axis's remembered size, not the current one. */
   const moveTo = useCallback((next: Dock) => {
@@ -361,11 +375,30 @@ export default function Terminal({ onClose }: { onClose: () => void }) {
   return (
     <section
       class="term"
+      /* The target of the opener's aria-controls. */
+      id="terminal-panel"
       ref={panelRef}
-      style={{ [axisOf(dock)]: `${size}px` }}
+      style={{ [axisOf(dock)]: `${size}px`, fontSize: `${font}px` }}
       aria-label="Terminal"
       onKeyDown={(e) => {
-        if (e.key === 'Escape') onClose();
+        if (e.key === 'Escape') {
+          onClose();
+          return;
+        }
+
+        // Ctrl/Cmd plus +/- resizes the text, the way an editor does.
+        //
+        // This deliberately takes those keys away from browser zoom, which is
+        // only defensible because it is scoped to the panel: the handler is on
+        // the panel, so it fires only while focus is inside it, and clicking
+        // the page back gives zoom straight back. `=` and `_` are the unshifted
+        // faces of `+` and `-`, and both need catching.
+        if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+        const grow = e.key === '+' || e.key === '=';
+        const shrink = e.key === '-' || e.key === '_';
+        if (!grow && !shrink) return;
+        e.preventDefault();
+        stepFont(grow ? 1 : -1);
       }}
     >
       <div
@@ -388,6 +421,29 @@ export default function Terminal({ onClose }: { onClose: () => void }) {
       <div class="term-bar">
         <span class="term-dot" aria-hidden="true" />
         <span class="term-title">taha.sh</span>
+
+        {/* Text size. Disabled at the bounds rather than silently ignoring a
+            press — a control that does nothing looks broken. */}
+        <div class="term-font" role="group" aria-label="Text size">
+          <button
+            type="button"
+            onClick={() => stepFont(-1)}
+            disabled={font <= FONT_MIN}
+            title={`Smaller text (${font}px)`}
+          >
+            <span aria-hidden="true">A&minus;</span>
+            <span class="sr-only">Smaller text</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => stepFont(1)}
+            disabled={font >= FONT_MAX}
+            title={`Larger text (${font}px)`}
+          >
+            <span aria-hidden="true">A+</span>
+            <span class="sr-only">Larger text</span>
+          </button>
+        </div>
 
         {/* Dock controls, in edge order so the row reads as a little map of
             where the panel can go. Hidden below the width where a side dock

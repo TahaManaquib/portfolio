@@ -19,16 +19,23 @@
 import { site } from '../data/site';
 
 const links = [
-  { href: '#stack', label: 'Stack' },
+  { href: '/#stack', label: 'Stack' },
   // The sandbox earns a nav item where the section it replaced deliberately had
   // none. That one was mysterious by design; this one is legible in five
   // seconds, and "access" in the nav states the specialism the whole section
   // is evidence for.
-  { href: '#access', label: 'Access' },
-  { href: '#contact', label: 'Contact' },
+  { href: '/#access', label: 'Access' },
+  { href: '/#contact', label: 'Contact' },
 ] as const;
 ---
 
+{
+  /* Rooted fragments (`/#stack`, not `#stack`) because the nav renders on every
+    route. From the 404 a bare fragment points at a section
+    that is not on the page and the link does nothing; rooted, it goes home and
+    lands on the section. On the homepage itself the behaviour is unchanged —
+    same-document navigation, so no reload. */
+}
 <nav aria-label="Primary" class="border-border bg-bg sticky top-0 z-40 border-b">
   {
     /* Wraps rather than overflows. Four links plus the résumé simply do not fit
@@ -42,7 +49,7 @@ const links = [
     class="gutter flex min-h-14 flex-wrap items-center justify-between gap-x-2 gap-y-1 py-2 sm:gap-x-6 sm:py-0"
   >
     <a
-      href="#top"
+      href="/#top"
       class="text-fg hover:text-accent inline-flex min-h-9 items-center font-mono text-sm font-medium tracking-[0.2em] transition-colors duration-150"
     >
       TAHA
@@ -75,7 +82,7 @@ const links = [
               actually called, so the short form costs nothing. */
           }
           <span class="sm:hidden">CV</span>
-          <span class="hidden sm:inline">Résumé</span>
+          <span class="hidden sm:inline">CV</span>
           <span class="sr-only">&nbsp;(opens in a new tab)</span>
         </a>
       </li>
