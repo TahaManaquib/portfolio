@@ -1632,6 +1632,36 @@ on a real machine.
   true), and the built loader reads `t ? [] : querySelectorAll(...)` with `t ||` short-circuiting
   the keydown handler.
 
+### After deploy: the terminal answers questions
+
+Taha's observation: a command with a closed set of arguments printed a list and gave up, so every
+command ended by handing the prompt back. `theme`, `dock` and `open` now open an arrow-key list
+instead — ↑↓ move, Enter selects, Esc cancels, Home/End jump, rows clickable.
+
+- **`Command.run` gained a third result kind**, `Select`, so a picker is data the command returns
+  rather than behaviour the component knows command-by-command. Usage, blurb and implementation
+  stay in one object, which is what stops `help` drifting from reality.
+- **Selecting runs the command the visitor would have typed.** One path, so nothing can diverge
+  from the typed form — and `theme amber` still never opens a list.
+- **The two real conflicts**, which were most of the work: Escape closes the panel, so the list
+  stops it at the question and a second Escape closes the panel; and ↑↓ mean history on the input,
+  which stops being a conflict at all once the handler lives on the list rather than the input.
+- **`hash` and `base64` were left out on purpose** — their enum arrives with required free text, so
+  a picker fills half the line and leaves you typing the rest.
+- **The theme listing lost its group names**, also at Taha's request. The six design names are gone;
+  the dark/light pairing survives in the order, which is where it did the work. A heading is also a
+  row the arrow keys would have to skip, so the two changes agreed with each other.
+- **One design risk removed before shipping rather than tested:** hover was moving the keyboard
+  selection, which fights arrowing when the list scrolls under a stationary cursor. Hover is
+  feedback only now.
+
+**Verification was incomplete, and worth recording as such.** `npm run check` and the build are
+clean and the picker is present in the built chunk and CSS — but the Chrome extension lost access
+to localhost partway through (curl 200, error page in the browser, across four origins including
+one that had worked earlier), and `commands.ts` cannot be loaded in Node because it imports
+`../../data/site` extensionless. So the keyboard behaviour was confirmed by Taha in the browser,
+not by me.
+
 ### Required
 
 - **`README.md`** — the final deliverable, and the last thing built. See CLAUDE.md's "What the
