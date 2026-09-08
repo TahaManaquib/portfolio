@@ -7,7 +7,7 @@
  * terminal. Nothing here is on the recruiter path.
  */
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
-import { runCommand, type Line } from './commands';
+import { runCommand, type Line, type Select } from './commands';
 import {
   DOCKS,
   FONT_MAX,
@@ -134,7 +134,19 @@ export default function Terminal({ onClose }: { onClose: () => void }) {
   /** The half-typed line, stashed so ArrowDown can return you to it. */
   const draftRef = useRef('');
 
+  /**
+   * The open question, if a command asked one.
+   *
+   * Held here rather than pushed into `lines`, which is what makes it correct
+   * for free in two places: it is never written to the persisted scrollback, so
+   * a reload cannot restore a half-answered prompt as if it were live; and
+   * answering it replaces the list rather than leaving fourteen dead rows
+   * behind, the way a real prompt does.
+   */
+  const [picker, setPicker] = useState<{ select: Select; index: number } | null>(null);
+
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLElement>(null);
 
@@ -342,6 +354,15 @@ export default function Terminal({ onClose }: { onClose: () => void }) {
 
       const echo: Line = { kind: 'in', text: input };
 
+      // A command that asked a question rather than answering one. The typed
+      // line is echoed as normal, so the scrollback reads truthfully — `theme`
+      // is what was typed — and the list opens underneath it.
+      if (!(result instanceof Promise) && typeof result === 'object' && 'kind' in result) {
+        setLines((prev) => [...prev, echo].slice(-MAX_LINES));
+        setPicker({ select: result, index: result.initial });
+        return;
+      }
+
       // `hash` goes through WebCrypto, which is async. Echo the command
       // immediately so the line does not sit there looking ignored, then append
       // the output when it resolves.
@@ -351,6 +372,12 @@ export default function Terminal({ onClose }: { onClose: () => void }) {
           .then((resolved) => {
             if (resolved === 'cls') {
               setLines([]);
+              return;
+            }
+            // No async command asks a question today; handled anyway so adding
+            // one cannot silently render `[object Object]`.
+            if (typeof resolved === 'object' && 'kind' in resolved) {
+              setPicker({ select: resolved, index: resolved.initial });
               return;
             }
             setLines((prev) => [...prev, ...resolved].slice(-MAX_LINES));
@@ -371,6 +398,93 @@ export default function Terminal({ onClose }: { onClose: () => void }) {
     },
     [value],
   );
+
+  /**
+   * Answers the open question by running the command the user would have typed.
+   *
+   * `runCommand(`${verb} ${value}`)` on purpose: selecting is the *same* path as
+   * typing, so the two cannot diverge and the award hook, the error handling and
+   * the output are all whatever the typed form already does.
+   */
+  const answer = useCallback(
+    (index: number) => {
+      if (!picker) return;
+      const option = picker.select.options[index];
+      if (!option) return;
+      setPicker(null);
+
+      const result = runCommand(`${picker.select.verb} ${option.value}`);
+      if (result === 'cls') {
+        setLines([]);
+        return;
+      }
+      if (result instanceof Promise) {
+        void result.then((resolved) => {
+          if (resolved === 'cls') setLines([]);
+          else if (!(typeof resolved === 'object' && 'kind' in resolved))
+            setLines((prev) => [...prev, ...resolved].slice(-MAX_LINES));
+        });
+        return;
+      }
+      if (typeof result === 'object' && 'kind' in result) return;
+      setLines((prev) => [...prev, ...result].slice(-MAX_LINES));
+    },
+    [picker],
+  );
+
+  const cancelPicker = useCallback(() => {
+    setPicker(null);
+    setLines((prev) => [...prev, { kind: 'dim', text: 'cancelled' } as Line].slice(-MAX_LINES));
+  }, []);
+
+  /**
+   * Keys while a question is open. They live on the list, not on the input,
+   * which is what keeps this from fighting the two handlers already bound:
+   * ArrowUp/Down mean *history* on the input and must keep meaning that, and
+   * typing goes nowhere because the input does not have focus.
+   */
+  const onListKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (!picker) return;
+      const last = picker.select.options.length - 1;
+      const move = (index: number) => {
+        e.preventDefault();
+        setPicker((prev) => (prev ? { ...prev, index } : prev));
+      };
+
+      if (e.key === 'ArrowDown') move(picker.index >= last ? 0 : picker.index + 1);
+      else if (e.key === 'ArrowUp') move(picker.index <= 0 ? last : picker.index - 1);
+      else if (e.key === 'Home') move(0);
+      else if (e.key === 'End') move(last);
+      else if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        answer(picker.index);
+      } else if (e.key === 'Escape') {
+        // **Stopped here deliberately.** Escape closes the whole panel from the
+        // section handler above; while a question is open it must cancel the
+        // question instead, and a second Escape then closes the panel.
+        e.preventDefault();
+        e.stopPropagation();
+        cancelPicker();
+      }
+    },
+    [picker, answer, cancelPicker],
+  );
+
+  // Focus follows the question: into the list when it opens, back to the input
+  // when it closes, so the caret is never left somewhere the keys do nothing.
+  useEffect(() => {
+    if (picker) listRef.current?.focus();
+    else inputRef.current?.focus();
+  }, [picker !== null]);
+
+  // Keep the highlighted row on screen without scrolling the panel around it.
+  useEffect(() => {
+    if (!picker) return;
+    listRef.current
+      ?.querySelector(`[data-option="${picker.index}"]`)
+      ?.scrollIntoView({ block: 'nearest' });
+  }, [picker?.index]);
 
   return (
     <section
@@ -473,7 +587,11 @@ export default function Terminal({ onClose }: { onClose: () => void }) {
         </button>
       </div>
 
-      <div class="term-body" ref={scrollRef} onClick={() => inputRef.current?.focus()}>
+      <div
+        class="term-body"
+        ref={scrollRef}
+        onClick={() => (picker ? listRef.current?.focus() : inputRef.current?.focus())}
+      >
         {lines.map((line, i) => (
           <div key={i} class={`term-line term-${line.kind}`}>
             {line.kind === 'in' ? (
@@ -484,6 +602,47 @@ export default function Terminal({ onClose }: { onClose: () => void }) {
             <span>{line.text}</span>
           </div>
         ))}
+
+        {picker ? (
+          <div class="term-ask">
+            <p class="term-ask-head">
+              <span>{picker.select.title}</span>
+              <span class="term-ask-keys">↑↓ move · enter select · esc cancel</span>
+            </p>
+            {/* A real listbox: the highlight is announced through
+                aria-activedescendant rather than by moving focus row to row,
+                which is what lets one keydown handler own the whole list. */}
+            <ul
+              class="term-ask-list"
+              ref={listRef}
+              tabIndex={0}
+              role="listbox"
+              aria-label={picker.select.title}
+              aria-activedescendant={`term-option-${picker.index}`}
+              onKeyDown={onListKeyDown}
+            >
+              {picker.select.options.map((option, i) => (
+                <li
+                  key={option.value}
+                  id={`term-option-${i}`}
+                  data-option={i}
+                  role="option"
+                  aria-selected={i === picker.index}
+                  class="term-ask-option"
+                  onClick={() => answer(i)}
+                >
+                  {/* A marker as well as colour — the highlight must not rest on
+                      hue alone (WCAG 1.4.1). */}
+                  <span class="term-ask-mark" aria-hidden="true">
+                    {i === picker.index ? '▸' : ' '}
+                  </span>
+                  <span class="term-ask-label">{option.label}</span>
+                  {option.hint ? <span class="term-ask-hint">{option.hint}</span> : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         <form class="term-form" onSubmit={submit}>
           <label class="term-prompt" for="term-input">

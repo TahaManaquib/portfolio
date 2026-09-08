@@ -895,6 +895,84 @@ h1 {
   /* Each echoed command starts a new block. Without this every command and its
      output run together into one wall, which is what made it feel cramped. */
   .term-in,
+  /* ---------------------------------------------------------------------
+     An open question — the list a command shows when its argument is one of a
+     closed set and you did not give one.
+
+     It lives inside the scrollback, above the prompt, so it scrolls with the
+     session rather than floating over it. Not a dropdown: this is a terminal,
+     and a prompt in a terminal is part of the transcript.
+     --------------------------------------------------------------------- */
+  .term-ask {
+    padding: 0.35rem 0 0.6rem;
+  }
+
+  .term-ask-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 1rem;
+    margin: 0 0 0.35rem;
+    color: var(--color-fg-muted);
+  }
+
+  .term-ask-keys {
+    color: var(--color-fg-muted);
+    /* Slightly down from the body size: a hint, not an instruction someone has
+       to read every time. */
+    font-size: 0.85em;
+  }
+
+  .term-ask-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* The list takes focus while the question is open, and the ring would draw
+     around the whole block. The highlighted row is the focus indicator here —
+     it moves with the arrow keys and is always visible. */
+  .term-ask-list:focus,
+  .term-ask-list:focus-visible {
+    outline: none;
+  }
+
+  .term-ask-option {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6ch;
+    padding: 0.05rem 0.5ch;
+    color: var(--color-fg-muted);
+    cursor: pointer;
+  }
+
+  /* Hover is feedback only — it must not move the selection. Letting it do so
+     meant arrowing down scrolled a row under a stationary cursor, whose
+     mouseenter then yanked the highlight back. The keyboard owns
+     `aria-selected`; the mouse gets a ground and a click. */
+  .term-ask-option:hover {
+    background-color: var(--color-surface);
+    color: var(--color-fg);
+  }
+
+  /* Marker, colour and ground all change together. The marker is the one that
+     matters: the highlight must never rest on hue alone (WCAG 1.4.1). */
+  .term-ask-option[aria-selected='true'] {
+    background-color: var(--color-accent-faint);
+    color: var(--color-fg);
+  }
+
+  .term-ask-mark {
+    width: 1ch;
+    color: var(--color-accent);
+    white-space: pre;
+  }
+
+  .term-ask-hint {
+    color: var(--color-fg-muted);
+    font-size: 0.85em;
+  }
+
   .term-form {
     margin-top: 1.4em;
   }

@@ -403,6 +403,35 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
          a reload shows the command with its effect gone — consistent, mildly odd, left alone.
     - **`whoami` was planned and then cut at Taha's request.** Do not build it. The
       returning-visitor work it belonged to was removed with Phase 4.
+  - **A command may ask a question instead of printing a usage line — built.** `theme`, `dock` and
+    `open` with no argument open an arrow-key list: ↑↓ move, Enter selects, Esc cancels, Home/End
+    jump, and the rows are clickable. Rules:
+    - **This is not the autocomplete ruled out below.** Autocomplete completes what you are
+      typing; this prompts for an argument you did not give. `theme amber` still works and never
+      opens a list, so the fast path is untouched — the picker only replaces a dead end.
+    - **Only where the missing argument is the whole of what is missing.** `hash` and `base64` are
+      deliberately excluded: their enum comes with required free text, so a picker would fill half
+      the line and leave you typing the rest, which is worse than typing all of it.
+    - **Selecting runs the command the visitor would have typed** — `runCommand(`${verb} ${value}`)`.
+      One path, so the award hook, the error handling and the output cannot diverge from the typed
+      form.
+    - **The picker is a `Select` returned by the command**, not something the component knows
+      per-command. That is what keeps usage, blurb and implementation in one object.
+    - **The keys live on the list, not the input.** ArrowUp/Down mean _history_ on the input and
+      must keep meaning that; putting the handler on the list means history is never in conflict,
+      and typing goes nowhere because the input does not have focus. Focus moves into the list on
+      open and back to the input on close.
+    - **Escape stops at the question.** The panel closes on Escape from the section handler, so the
+      list calls `stopPropagation()`: the first Escape cancels the question, a second closes the
+      panel.
+    - **Held outside the scrollback**, which makes two things right for free: it is never written
+      to the persisted session, so a reload cannot restore a half-answered prompt as live; and
+      answering replaces the list rather than leaving a dozen dead rows behind.
+    - **Hover is feedback only, never selection.** Letting hover move the highlight meant arrowing
+      down scrolled a row under a stationary cursor, whose `mouseenter` yanked it back. The
+      keyboard owns `aria-selected`; the mouse gets a ground and a click.
+    - Real `role="listbox"`/`role="option"` with `aria-activedescendant`, and the highlight is a
+      marker **plus** colour — never hue alone (WCAG 1.4.1).
   - Not building: autocomplete, a fake filesystem, tabs, split panes. It is a personality feature
     wearing a terminal's clothes, not an emulator.
 
@@ -582,8 +611,12 @@ doesn't clearly buy either recruiter clarity or a specific, intentional discover
          - **The grounds are the part Taha liked most**, so they are multi-layer and deliberate —
            a phosphor glow, a two-scale drafting grid, diagonal bands, a three-stop wash. Still
            `color-mix` on the seeds, still off by default.
-         - **The theme listing groups by look**, and `HUES` is ordered in pairs, so twelve names
-           read as six designs on two grounds.
+         - ~~**The theme listing groups by look.**~~ **Flat now, at Taha's request** — the six
+           design names (clean, terminal, editorial, brutal, blueprint, soft) are gone from
+           `theme`'s output. They meant nothing to anyone who had not read this file, and a
+           heading is a row the arrow keys have to skip, which made the picker worse for the sake
+           of a label. `HUES` is still ordered in dark/light pairs, so the pairing survives in the
+           order — which is where it always did the actual work. The polarity is still shown.
          - Measure the hero at 360 and 390 **per identity** when touching any of this. Six
            typefaces, display sizes from 28px to 96px; the clamp floors matter more than the
            ceilings.
