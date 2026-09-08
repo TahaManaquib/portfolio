@@ -43,8 +43,47 @@ const err = (text: string): Line => ({ kind: 'err', text });
 const TOOLS_NEEDING_INPUT: readonly string[] = ['jwt', 'hash', 'base64'];
 const TOOLS: readonly string[] = [...TOOLS_NEEDING_INPUT, 'uuid'];
 
-/** A command's output, or `cls` to signal a screen wipe. */
-type Output = Line[] | 'cls';
+/**
+ * One row of a `Select`.
+ *
+ * `value` is what gets handed back to the command, so a selection is literally
+ * the same as having typed the argument — there is no second code path to
+ * drift from the typed one.
+ */
+export interface SelectOption {
+  readonly value: string;
+  readonly label: string;
+  /** Dim trailing text: the polarity, the current setting, whatever qualifies. */
+  readonly hint?: string;
+}
+
+/**
+ * A command asking for an argument it can enumerate, instead of printing a
+ * usage line and giving up.
+ *
+ * **This is not autocomplete**, which CLAUDE.md rules out. Autocomplete
+ * completes what you are typing; this prompts for an argument you did not
+ * give. Typing `theme amber` still works and never opens a picker — the fast
+ * path is untouched, and the picker is what replaces a dead end.
+ *
+ * Only commands whose missing argument is the *whole* of what is missing
+ * qualify. `hash` and `base64` are deliberately excluded: their enum comes
+ * with required free text, so a picker would fill half the line and leave you
+ * typing the rest, which is worse than typing all of it.
+ */
+export interface Select {
+  readonly kind: 'select';
+  /** One line above the list, e.g. `12 identities`. */
+  readonly title: string;
+  readonly options: readonly SelectOption[];
+  /** Which row starts highlighted — the current setting, where there is one. */
+  readonly initial: number;
+  /** Re-run as `${verb} ${value}` on select. */
+  readonly verb: string;
+}
+
+/** A command's output: lines, a screen wipe, or a question. */
+type Output = Line[] | 'cls' | Select;
 
 interface Command {
   /** What `help` prints on the left. Includes the argument shape. */
@@ -349,7 +388,7 @@ function themeIds(): string[] {
   return themeEntries().map((t) => t.id);
 }
 
-function theme(arg: string): Line[] {
+function theme(arg: string): Line[] | Select {
   const ids = themeIds();
   const current =
     document
@@ -357,28 +396,32 @@ function theme(arg: string): Line[] {
       ?.id.replace(/^theme-/, '') ?? ids[0];
 
   if (!arg) {
-    // Grouped by shape, because the twelve are really six designs seen on two
-    // grounds — a flat list hides that and reads as twelve unrelated names.
-    // The polarity is shown here and nowhere else: there is no brightness
-    // control on the page, so a light identity is something you find.
+    // **A flat list, no shape headings** — removed at Taha's request. It used to
+    // group the twelve under their six design names (clean, terminal,
+    // editorial, brutal, blueprint, soft) on the reasoning that twelve names
+    // read as unrelated otherwise. Two things changed that: the names meant
+    // nothing to anyone who had not read the source, and a heading is a row the
+    // arrow keys have to skip, which makes the picker below worse for the sake
+    // of a label. The dark/light pairing survives in the *order*, which is
+    // where it always did the actual work.
+    //
+    // The polarity is still shown, here and nowhere else: there is no
+    // brightness control on the page, so a light identity is something you find.
     const entries = themeEntries();
-    const width = Math.max(...entries.map((t) => t.id.length));
-
-    const shapes: string[] = [];
-    for (const t of entries) if (!shapes.includes(t.shape)) shapes.push(t.shape);
-
-    const lines: Line[] = [out(`${shapes.length} looks, each on two grounds`)];
-    for (const shape of shapes) {
-      lines.push(dim(''));
-      lines.push(dim(`  ${shape}`));
-      for (const t of entries.filter((e) => e.shape === shape)) {
-        const line = `    ${t.id === current ? '·' : ' '} ${t.id.padEnd(width)}  (${t.polarity})`;
-        lines.push(t.id === current ? out(line) : dim(line));
-      }
-    }
-    lines.push(dim(''));
-    lines.push(dim('usage: theme <name>'));
-    return lines;
+    return {
+      kind: 'select',
+      title: `${entries.length} identities`,
+      verb: 'theme',
+      initial: Math.max(
+        0,
+        entries.findIndex((t) => t.id === current),
+      ),
+      options: entries.map((t) => ({
+        value: t.id,
+        label: t.id,
+        hint: t.polarity,
+      })),
+    };
   }
 
   const wanted = arg.toLowerCase();
@@ -457,12 +500,22 @@ async function reset(): Promise<Line[]> {
  * goes out as an event for the same reason `open` closes by event: importing
  * the component here would make the module graph circular.
  */
-function dockCmd(arg: string): Line[] {
+function dockCmd(arg: string): Line[] | Select {
   const root = document.documentElement;
   const current = (root.dataset.dock ?? DEFAULT_DOCK) as Dock;
 
   if (!arg) {
-    return [out(`dock  ${current}`), dim(''), dim(`usage: dock ${DOCKS.join('|')}`)];
+    return {
+      kind: 'select',
+      title: 'panel position',
+      verb: 'dock',
+      initial: Math.max(0, DOCKS.indexOf(current)),
+      options: DOCKS.map((d) => ({
+        value: d,
+        label: d,
+        hint: d === current ? 'current' : undefined,
+      })),
+    };
   }
 
   const wanted = arg.toLowerCase();
@@ -490,15 +543,16 @@ function sectionIds(): string[] {
     .filter(Boolean);
 }
 
-function open(arg: string): Line[] {
+function open(arg: string): Line[] | Select {
   const ids = sectionIds();
   if (!arg)
-    return [
-      out('sections'),
-      ...ids.map((id) => dim(`  ${id}`)),
-      dim(''),
-      dim('usage: open <section>'),
-    ];
+    return {
+      kind: 'select',
+      title: 'sections',
+      verb: 'open',
+      initial: 0,
+      options: ids.map((id) => ({ value: id, label: id })),
+    };
 
   const wanted = arg.toLowerCase();
   const target = ids.includes(wanted) ? document.getElementById(wanted) : null;
